@@ -12,9 +12,7 @@
     "test:ui": "vitest --ui",
     "clean": "pnpm -r clean && rm -rf node_modules",
     "typecheck": "pnpm -r typecheck",
-    "sync:blog": "bash scripts/update-blog.sh",
-    "submodule:update": "git submodule update --init --recursive",
-    "submodule:status": "git submodule status"
+    "sync:blog": "bash scripts/update-blog.sh"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
