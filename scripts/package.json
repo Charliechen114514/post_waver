@@ -1,0 +1,14 @@
+{
+  "name": "@content-hub/scripts",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "scan": "./scan.js",
+    "sync-hexo": "./sync-to-hexo.js",
+    "migrate-images": "./migrate-images.js"
+  },
+  "dependencies": {
+    "@content-hub/core": "workspace:*",
+    "@content-hub/linker": "workspace:*"
+  }
+}

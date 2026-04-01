@@ -1,0 +1,20 @@
+{
+  "name": "@content-hub/engine",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@content-hub/core": "workspace:*",
+    "@content-hub/linker": "workspace:*",
+    "@content-hub/transformer": "workspace:*",
+    "@content-hub/adapter": "workspace:*",
+    "hono": "^3.11.0",
+    "dotenv": "^16.3.1"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@content-hub/transformer",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@content-hub/core": "workspace:*",
+    "rehype-raw": "^7.0.0",
+    "rehype-sanitize": "^6.0.0"
+  }
+}
