@@ -24,11 +24,8 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Hexo
-blog/public/
-blog/.deploy_git/
-blog/db.json
-blog/node_modules/
+# Hexo Blog (用户自己管理自己的博客)
+blog/
 
 # 索引文件（可选择性提交）
 content-index.json
