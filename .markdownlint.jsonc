@@ -1,0 +1,20 @@
+{
+  // 默认配置
+  "default": true,
+
+  // 规则配置
+  "MD001": true,                    // 标题层级不能跳级
+  "MD003": { "style": "atx" },     // 标题风格：使用 # 号
+  "MD004": { "style": "dash" },    // 列表风格：使用 -
+  "MD040": true,                    // 代码块必须指定语言
+  "MD041": true,                    // 文件必须以 H1 开头
+  "MD022": true,                    // 标题前后必须有空行
+  "MD010": true,                    // 禁止硬 tab
+  "MD012": true,                    // 不允许连续多个空行
+  "MD033": false,                   // 允许 HTML（我们需要）
+  "MD034": false,                   // 允许裸 URL
+  "MD046": { "style": "fenced" },  // 代码块风格：使用 ```
+  "MD048": { "style": "fenced" },  // 代码块风格：使用 ```
+  "MD049": { "style": "asterisk" }, // 强调风格：使用 *
+  "MD050": { "style": "consistent" } // 分隔线风格：保持一致
+}

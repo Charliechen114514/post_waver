@@ -27,6 +27,9 @@ Thumbs.db
 # Hexo Blog (用户自己管理自己的博客)
 blog/
 
+# 用户内容文件（在 content/.gitignore 中处理）
+# content/ 目录保留，但用户文章被忽略
+
 # 索引文件（可选择性提交）
 content-index.json
 

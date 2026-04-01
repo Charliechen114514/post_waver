@@ -1,0 +1,15 @@
+# 忽略所有用户内容
+posts/**/*.md
+!posts/example-post.md
+
+# 忽略 assets 中的大文件
+assets/images/**/*
+!assets/images/.gitkeep
+!assets/images/example-image.md
+
+# 视频、音频等大文件
+assets/videos/**/*
+assets/audio/**/*
+
+# 保留目录标记文件
+**/.gitkeep

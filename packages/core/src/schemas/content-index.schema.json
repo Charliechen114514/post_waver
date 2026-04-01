@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://content-hub.dev/schemas/content-index.json",
+  "title": "ContentIndex",
+  "description": "内容索引文件结构",
+  "type": "object",
+  "required": ["version", "posts", "lastUpdated", "metadata"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "description": "Schema 版本",
+      "minimum": 1
+    },
+    "posts": {
+      "type": "object",
+      "description": "文章索引映射",
+      "patternProperties": {
+        ".*": {
+          "$ref": "#/definitions/IndexedPost"
+        }
+      }
+    },
+    "lastUpdated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "最后更新时间"
+    },
+    "metadata": {
+      "$ref": "#/definitions/IndexMetadata"
+    }
+  },
+  "definitions": {
+    "IndexedPost": {
+      "type": "object",
+      "required": ["id", "title", "date", "tags", "contentHash", "filepath", "draft"],
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "contentHash": { "type": "string" },
+        "filepath": { "type": "string" },
+        "draft": { "type": "boolean" },
+        "prev": { "type": "string" },
+        "next": { "type": "string" },
+        "related": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RelatedPost"
+          }
+        }
+      }
+    },
+    "RelatedPost": {
+      "type": "object",
+      "required": ["id", "title", "score"],
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "score": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "IndexMetadata": {
+      "type": "object",
+      "required": ["totalPosts", "draftCount", "allTags"],
+      "properties": {
+        "totalPosts": { "type": "integer", "minimum": 0 },
+        "draftCount": { "type": "integer", "minimum": 0 },
+        "allTags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -17,12 +17,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "glob": "^10.3.10",
     "gray-matter": "^4.0.3",
     "remark": "^15.0.1",
+    "remark-html": "^16.0.1",
     "remark-parse": "^11.0.0",
     "remark-stringify": "^11.0.0",
-    "remark-html": "^16.0.1",
-    "glob": "^10.3.10"
+    "unified": "^11.0.5"
   },
   "devDependencies": {
     "@types/glob": "^8.1.0"
