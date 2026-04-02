@@ -1,4 +1,4 @@
-import { PostDAL, WorkflowStatus } from '@content-hub/database/dist/dal/post.js'
+import { PostDAL, WorkflowStatus } from '@content-hub/database'
 
 /**
  * 工作流状态枚举

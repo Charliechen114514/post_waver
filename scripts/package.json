@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@content-hub/core": "workspace:*",
+    "@content-hub/config": "workspace:*",
     "@content-hub/engine": "workspace:*",
     "@content-hub/linker": "workspace:*",
     "@content-hub/transformer": "workspace:*",

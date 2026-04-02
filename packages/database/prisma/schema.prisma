@@ -55,3 +55,91 @@ model OperationLog {
 
   @@index([postId])
 }
+
+model TitleInjectionRule {
+  id        String   @id @default(cuid())
+  platform  String   // juejin, wechat, html, global
+  enabled   Boolean  @default(true)
+  content   String   // 注入的文本内容
+  position  String   @default("after_title") // after_title, before_content
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([platform])
+}
+
+model PostInjectionOverride {
+  id        String   @id @default(cuid())
+  postId    String   @unique
+  content   String?
+  enabled   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([postId])
+}
+
+// ===== 新增：统一数据存储表 =====
+
+// Config 表：存储所有配置（替代 JSON 配置文件）
+model Config {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String   // JSON 字符串
+  category  String   // frontmatter, main, hexo, imageUpload, theme, wechatToken
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([key])
+}
+
+// TagCache 表：标签缓存（替代 frontmatter-tag-cache.json）
+model TagCache {
+  id              Int      @id @default(autoincrement())
+  tag             String   @unique
+  count           Int      @default(1)
+  lastUsed        DateTime @default(now())
+  relatedKeywords String   // JSON array: ["react", "hooks", "components"]
+  categories      String   // JSON array: ["tech", "tutorial"]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tag])
+  @@index([count])
+}
+
+// ContentIndex 表：内容索引（替代 content-index.json）
+model ContentIndex {
+  id          String    @id
+  title       String
+  date        DateTime
+  tags        String    // JSON array
+  contentHash String
+  filepath    String
+  draft       Boolean   @default(false)
+  prev        String?
+  next        String?
+  related     String?   // JSON array
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([date])
+  @@index([draft])
+}
+
+// PlatformIdMapping 表：平台 ID 映射（替代 platform-ids.json）
+model PlatformIdMapping {
+  id             Int      @id @default(autoincrement())
+  postId         String
+  platform       String   // juejin, zhihu, csdn, wechat
+  platformPostId String
+  url            String?
+  publishedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([postId, platform])
+  @@index([postId])
+  @@index([platform])
+}

@@ -81,15 +81,12 @@ post_waver/
 **⚠️ 重要：**
 - `content/` 目录已在 `.gitignore` 中
 - 用户需要自己创建此目录
-- 参考 `content-example/` 了解结构
 
 **创建方法：**
 ```bash
-# 方式 1: 复制示例
-cp -r content-example content
-
-# 方式 2: 手动创建
+# 创建内容目录
 mkdir -p content/posts/{tech,life,notes}
+mkdir -p content/assets/images
 ```
 
 **结构示例：**

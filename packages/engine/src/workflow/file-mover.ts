@@ -98,7 +98,10 @@ export class FileMover {
         }
 
         // 处理本地资源
-        const sourceAssetPath = join(process.cwd(), 'content', assetPath)
+        // 资源路径应该相对于markdown文件所在目录解析
+        const markdownDir = dirname(markdownPath)
+        const sourceAssetPath = join(markdownDir, assetPath)
+
         if (!existsSync(sourceAssetPath)) {
           console.warn(`  ⚠️  资源文件不存在: ${sourceAssetPath}`)
           continue
@@ -172,11 +175,11 @@ export class FileMover {
       throw new Error(`Done 文件不存在: ${sourcePath}`)
     }
 
-    // 移动主文件
-    await fs.rename(sourcePath, targetPath)
-
-    // 同时回滚资源文件
+    // 先回滚资源文件（在移动主文件之前，因为 rollbackAssets 需要读取源文件）
     await this.rollbackAssets(postId, sourcePath)
+
+    // 再移动主文件
+    await fs.rename(sourcePath, targetPath)
 
     console.log(`✅ 文件已回滚: ${sourcePath} → ${targetPath}`)
 

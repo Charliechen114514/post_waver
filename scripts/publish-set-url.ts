@@ -7,7 +7,7 @@ async function main() {
   const args = process.argv.slice(2)
 
   if (args.length < 4) {
-    console.error('Usage: pnpm publish:set-url <postId> --platform <platform> --url <url>')
+    console.error('Usage: pnpm post:publish:set-url <postId> --platform <platform> --url <url>')
     process.exit(1)
   }
 

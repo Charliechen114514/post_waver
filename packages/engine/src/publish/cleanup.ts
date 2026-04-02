@@ -1,6 +1,6 @@
 import { readdir, stat, unlink } from 'fs/promises'
 import { join } from 'path'
-import { ConfigManager } from '@content-hub/config/dist/config-manager.js'
+import { ConfigManager } from '@content-hub/config'
 
 export class OutputCleanupManager {
   private config: ConfigManager
@@ -14,7 +14,7 @@ export class OutputCleanupManager {
    */
   async cleanup(options: { days?: number; dryRun?: boolean } = {}) {
     const { days, dryRun = false } = options
-    const cleanupConfig = this.config.get('cleanup')
+    const cleanupConfig = await this.config.get('cleanup')
 
     const retainDays = days || cleanupConfig.retainDays
     const outputDir = join(process.cwd(), 'output')

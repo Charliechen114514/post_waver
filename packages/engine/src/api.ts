@@ -1,7 +1,6 @@
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { readIndex } from '@content-hub/core'
 import { parsePost } from '@content-hub/core'
 import { transformForJuejin, transformForWechat } from '@content-hub/transformer'
 import {
@@ -23,10 +22,9 @@ export interface APIServer {
  */
 export async function createAPIServer(options: {
   contentDir?: string
-  indexPath?: string
   port?: number
 }): Promise<APIServer> {
-  const { indexPath = 'content-index.json', port = 3001 } = options
+  const { port = 3001 } = options
 
   const app = new Hono()
 
@@ -41,19 +39,37 @@ export async function createAPIServer(options: {
   // 获取文章列表
   app.get('/api/posts', async (c) => {
     try {
-      const index = await readIndex(indexPath)
-      if (!index) {
-        return c.json({ posts: [], metadata: { totalPosts: 0, draftCount: 0, allTags: [] } })
-      }
+      const { PostDAL } = await import('@content-hub/database')
+      const dal = new PostDAL()
 
-      const posts = Object.values(index.posts || {})
+      console.log('🔍 正在查询文章列表...')
+      const posts = await dal.findAll()
+      console.log(`✅ 找到 ${posts.length} 篇文章`)
+
+      // 转换为前端需要的格式
+      const formattedPosts = posts.map(post => ({
+        id: post.postId,
+        title: post.title || post.postId,
+        date: post.createdAt?.toISOString() || new Date().toISOString(),
+        tags: [], // 数据库暂无 tags 字段，先返回空数组
+        draft: post.status !== 'published',
+        filepath: post.currentPath || post.originalPath || '',
+        status: post.status,
+        workflowStatus: post.workflowStatus
+      }))
+
+      console.log(`📤 返回 ${formattedPosts.length} 篇文章给前端`)
+
       return c.json({
-        posts,
-        metadata: index.metadata
+        posts: formattedPosts,
+        metadata: {
+          totalPosts: posts.length,
+          draftCount: posts.filter(p => p.status !== 'published').length
+        }
       })
     } catch (error) {
-      console.error('获取文章列表失败:', error)
-      return c.json({ error: '获取文章列表失败' }, 500)
+      console.error('❌ 获取文章列表失败:', error)
+      return c.json({ error: '获取文章列表失败', details: error instanceof Error ? error.message : String(error) }, 500)
     }
   })
 
@@ -61,21 +77,47 @@ export async function createAPIServer(options: {
   app.get('/api/posts/:id', async (c) => {
     try {
       const { id } = c.req.param()
-      const index = await readIndex(indexPath)
 
-      if (!index || !index.posts[id]) {
+      const { PostDAL } = await import('@content-hub/database')
+      const dal = new PostDAL()
+
+      const post = await dal.findByPostId(id)
+
+      if (!post) {
         return c.json({ error: '文章不存在' }, 404)
       }
 
-      const indexedPost = index.posts[id]
+      // 从文件系统读取文章内容
+      const fs = await import('fs/promises')
+      const path = await import('path')
 
-      // 解析完整文章（filepath 已经是绝对路径）
-      const post = await parsePost(indexedPost.filepath)
+      // 确定文件路径
+      let filepath = post.currentPath || post.originalPath
+      if (!filepath) {
+        // 尝试从 posts 目录查找
+        const testPath = path.join(process.cwd(), 'content/posts', `${id}.md`)
+        try {
+          await fs.access(testPath)
+          filepath = testPath
+        } catch {
+          return c.json({ error: '文章文件不存在' }, 404)
+        }
+      }
+
+      // 解析文章内容
+      const parsed = await parsePost(filepath)
 
       return c.json({
-        ...indexedPost,
-        content: post.content,
-        frontmatter: post.frontmatter
+        id: post.postId,
+        title: post.title,
+        date: post.createdAt?.toISOString() || new Date().toISOString(),
+        tags: [],
+        draft: post.status !== 'published',
+        filepath,
+        status: post.status,
+        workflowStatus: post.workflowStatus,
+        content: parsed.content,
+        frontmatter: parsed.frontmatter
       })
     } catch (error) {
       console.error('获取文章详情失败:', error)
@@ -93,32 +135,48 @@ export async function createAPIServer(options: {
         return c.json({ error: '不支持的平台' }, 400)
       }
 
-      const index = await readIndex(indexPath)
-      if (!index || !index.posts[id]) {
+      const { PostDAL } = await import('@content-hub/database')
+      const dal = new PostDAL()
+
+      const post = await dal.findByPostId(id)
+
+      if (!post) {
         return c.json({ error: '文章不存在' }, 404)
       }
 
-      const indexedPost = index.posts[id]
+      // 从文件系统读取文章内容
+      const fs = await import('fs/promises')
+      const path = await import('path')
 
-      // 解析完整文章（filepath 已经是绝对路径）
-      const post = await parsePost(indexedPost.filepath)
+      let filepath = post.currentPath || post.originalPath
+      if (!filepath) {
+        const testPath = path.join(process.cwd(), 'content/posts', `${id}.md`)
+        try {
+          await fs.access(testPath)
+          filepath = testPath
+        } catch {
+          return c.json({ error: '文章文件不存在' }, 404)
+        }
+      }
+
+      const parsed = await parsePost(filepath)
 
       let transformedContent: string
       switch (platform) {
         case 'juejin':
-          transformedContent = await transformForJuejin(post.content)
+          transformedContent = await transformForJuejin(parsed.content)
           break
         case 'wechat':
-          transformedContent = await transformForWechat(post.content)
+          transformedContent = await transformForWechat(parsed.content)
           break
         default:
-          transformedContent = post.content
+          transformedContent = parsed.content
       }
 
       return c.json({
         success: true,
         content: transformedContent,
-        title: post.frontmatter.title
+        title: post.title
       })
     } catch (error) {
       console.error('预览失败:', error)

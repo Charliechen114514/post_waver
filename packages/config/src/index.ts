@@ -1,1 +1,6 @@
 export { ConfigManager, type PublishConfig } from './config-manager.js'
+export { HexoConfigManager, type HexoSyncConfig } from './hexo-config.js'
+export { ImageUploadConfigManager, type ImageUploadConfig } from './image-upload-config.js'
+export { TitleInjectorConfigManager } from './title-injector-config.js'
+export type { TitleInjectionRule, PostInjectionOverride } from './title-injector-config.js'
+export { ThemeConfigManager, type ThemePreferences, type ThemeMetadata } from './theme-config.js'

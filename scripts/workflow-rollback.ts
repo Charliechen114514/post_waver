@@ -1,4 +1,5 @@
 import { WorkflowOrchestrator } from '../packages/engine/src/workflow/orchestrator.js'
+import { disconnectDatabase, disconnectStatusTransition } from '../packages/database/dist/index.js'
 
 async function main() {
   const postId = process.argv[2]
@@ -17,7 +18,15 @@ async function main() {
   } catch (error) {
     console.error('\n回滚失败:', error)
     process.exit(1)
+  } finally {
+    await disconnectDatabase()
+    await disconnectStatusTransition()
   }
 }
 
-main()
+main().catch(error => {
+  console.error('回滚失败:', error)
+  process.exit(1)
+}).then(() => {
+  process.exit(0)
+})

@@ -17,6 +17,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.82.0",
+    "@content-hub/database": "workspace:*",
     "@content-hub/linker": "workspace:*",
     "glob": "^10.3.10",
     "gray-matter": "^4.0.3",

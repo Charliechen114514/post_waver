@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Frontmatter Auto-Generation Configuration",
+  "description": "配置文件用于控制 frontmatter 自动生成行为",
+  "type": "object",
+  "required": ["version", "commonTags", "commonCategories", "autoGeneration"],
+  "properties": {
+    "version": {
+      "type": "number",
+      "description": "配置文件版本",
+      "const": 1
+    },
+    "commonTags": {
+      "type": "array",
+      "description": "常用标签库，AI 生成时会优先参考这些标签",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "commonCategories": {
+      "type": "array",
+      "description": "常用分类库，AI 生成时会优先参考这些分类",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "autoGeneration": {
+      "type": "object",
+      "description": "自动生成配置",
+      "required": ["enabled", "preferAI", "saveToFile", "fallbackToRules"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "是否启用自动生成功能",
+          "default": true
+        },
+        "preferAI": {
+          "type": "boolean",
+          "description": "是否优先使用 AI 生成（在 Claude Code 环境中自动检测）",
+          "default": true
+        },
+        "saveToFile": {
+          "type": "boolean",
+          "description": "是否将生成的 frontmatter 保存到文件",
+          "default": false
+        },
+        "fallbackToRules": {
+          "type": "boolean",
+          "description": "AI 失败时是否 fallback 到规则方案",
+          "default": true
+        }
+      }
+    },
+    "lastUpdated": {
+      "type": "string",
+      "description": "最后更新时间（ISO8601 格式）",
+      "format": "date-time"
+    }
+  }
+}

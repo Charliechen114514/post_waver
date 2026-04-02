@@ -20,7 +20,7 @@ async function main() {
   else if (!isNaN(parseInt(value))) parsedValue = parseInt(value)
 
   // 设置配置
-  manager.set(key as any, parsedValue)
+  await manager.set(key as any, parsedValue)
 
   console.log(`✅ 配置已更新: ${key} = ${parsedValue}`)
 }

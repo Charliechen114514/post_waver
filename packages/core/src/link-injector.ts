@@ -35,14 +35,14 @@ function generatePermalink(
  *
  * @param content - 原始文章内容
  * @param post - 当前文章的索引信息
- * @param allPosts - 所有文章的索引
+ * @param allPosts - 所有文章的索引（Map 或 Record）
  * @param permalinkPattern - Hexo permalink 模式，默认 ':year/:month/:day/:title/'
  * @returns 注入关联信息后的文章内容
  */
 export function injectRelatedLinks(
   content: string,
   post: IndexedPost,
-  allPosts: Record<string, IndexedPost>,
+  allPosts: Map<string, IndexedPost> | Record<string, IndexedPost>,
   permalinkPattern: string = ':year/:month/:day/:title/'
 ): string {
   let footer = '\n\n---\n\n## 相关阅读\n\n'
@@ -52,7 +52,7 @@ export function injectRelatedLinks(
     footer += '**相邻文章**：\n\n'
 
     if (post.prev) {
-      const prevPost = allPosts[post.prev]
+      const prevPost = allPosts instanceof Map ? allPosts.get(post.prev) : allPosts[post.prev]
       if (prevPost) {
         const permalink = generatePermalink(prevPost.id, prevPost.date, permalinkPattern)
         footer += `- [上一篇: ${prevPost.title}](${permalink}/)\n`
@@ -60,7 +60,7 @@ export function injectRelatedLinks(
     }
 
     if (post.next) {
-      const nextPost = allPosts[post.next]
+      const nextPost = allPosts instanceof Map ? allPosts.get(post.next) : allPosts[post.next]
       if (nextPost) {
         const permalink = generatePermalink(nextPost.id, nextPost.date, permalinkPattern)
         footer += `- [下一篇: ${nextPost.title}](${permalink}/)\n`
@@ -77,7 +77,7 @@ export function injectRelatedLinks(
     post.related
       .slice(0, 3) // 只显示前 3 篇
       .forEach((item, index) => {
-        const relatedPost = allPosts[item.id]
+        const relatedPost = allPosts instanceof Map ? allPosts.get(item.id) : allPosts[item.id]
         if (relatedPost) {
           const permalink = generatePermalink(relatedPost.id, relatedPost.date, permalinkPattern)
           footer += `${index + 1}. [${relatedPost.title}](${permalink}/) - 相似度 ${(item.score * 100).toFixed(0)}%\n`

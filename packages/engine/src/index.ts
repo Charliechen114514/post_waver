@@ -22,3 +22,14 @@ export * from './publish/full-pipeline.js'
 export * from './workflow/status-manager.js'
 export * from './workflow/file-mover.js'
 export * from './workflow/orchestrator.js'
+
+// Export hexo sync functionality
+export * from './hexo/sync-engine.js'
+
+// Export image upload functionality
+export * from './image/upload-manager.js'
+export * from './image/wechat-client.js'
+export * from './image/image-url-replacer.js'
+
+// Export UI functionality
+export * from './ui/prompt-manager.js'

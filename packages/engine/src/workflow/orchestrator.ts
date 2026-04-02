@@ -20,7 +20,7 @@ export class WorkflowOrchestrator {
   /**
    * 处理单个文章
    */
-  async processPost(postId: string): Promise<void> {
+  async processPost(postId: string, options: { fast?: boolean } = {}): Promise<void> {
     console.log(`\n🔄 开始处理: ${postId}`)
 
     try {
@@ -29,9 +29,13 @@ export class WorkflowOrchestrator {
       await this.statusManager.markAsProcessing(postId)
       console.log(`   ✅ 状态已更新: processing`)
 
-      // 2. 预览确认
-      console.log(`\n👀 2/5 预览确认...`)
-      await this.previewAndConfirm(postId)
+      // 2. 预览确认（fast 模式跳过）
+      if (!options.fast) {
+        console.log(`\n👀 2/5 预览确认...`)
+        await this.previewAndConfirm(postId)
+      } else {
+        console.log(`\n⏭️  2/5 跳过预览确认（fast 模式）`)
+      }
 
       // 3. 确保文章状态为previewing（满足发布流程的要求）
       try {
@@ -44,35 +48,37 @@ export class WorkflowOrchestrator {
         }
       }
 
-      // 4. 生成平台产物
+      // 4. 生成平台产物（FullPublishPipeline 内部会处理文件移动）
       console.log(`\n📝 4/5 生成平台产物...`)
       const result = await this.publishPipeline.publish(postId, {
         skipSync: false,
         skipPageGen: false,
-        openBrowser: false
+        openBrowser: options.fast,  // fast 模式下打开浏览器
+        mode: 'fast'
       })
 
       if (!result.success) {
-        throw new Error(result.message || '发布失败')
+        // 找到失败的步骤
+        const failedStep = result.steps.find(s => s.status === 'failed')
+        throw new Error(failedStep?.error || '发布失败')
       }
 
-      // 5. 移动到 done 目录
-      console.log(`\n📦 5/5 移动到 done 目录...`)
-      const donePath = await this.fileMover.moveToDone(postId, {
-        updateReferences: true,
-        moveAssets: true,
-        createBackup: false
-      })
-
-      // 6. 标记为完成
-      console.log(`\n✅ 6/6 更新状态...`)
-      await this.statusManager.markAsDone(postId, donePath)
-      console.log(`   ✅ 状态已更新: done`)
+      // 5. 标记为完成
+      console.log(`\n✅ 5/5 更新状态...`)
+      // FullPublishPipeline 已经处理了文件移动和状态更新，这里只需要记录完成
+      console.log(`   ✅ 处理完成: ${postId}`)
 
       console.log(`\n✅ 处理完成: ${postId}\n`)
 
     } catch (error) {
-      console.error(`\n❌ 处理失败: ${postId}`, error)
+      // 区分用户取消和真正的错误
+      const isUserCancelled = error instanceof Error && error.name === 'USER_CANCELLED'
+
+      if (isUserCancelled) {
+        console.log(`\n⏸️  处理已取消: ${postId}`)
+      } else {
+        console.error(`\n❌ 处理失败: ${postId}`, error)
+      }
 
       // 回滚状态
       try {
@@ -80,7 +86,11 @@ export class WorkflowOrchestrator {
           postId,
           WorkflowStatusEnum.PENDING as any
         )
-        console.log(`   ⚠️  状态已回滚: pending`)
+        if (isUserCancelled) {
+          console.log(`   ✅ 状态保持: pending`)
+        } else {
+          console.log(`   ⚠️  状态已回滚: pending`)
+        }
       } catch (rollbackError) {
         console.error(`   ❌ 状态回滚失败:`, rollbackError)
       }
@@ -93,7 +103,6 @@ export class WorkflowOrchestrator {
    * 预览并等待用户确认
    */
   private async previewAndConfirm(postId: string): Promise<void> {
-    const { createInterface } = await import('readline')
     const { readFileSync } = await import('fs')
     const { join } = await import('path')
 
@@ -104,55 +113,109 @@ export class WorkflowOrchestrator {
     // 提取标题和内容
     const titleMatch = postContent.match(/^title:\s*(.+)$/m)
     const title = titleMatch ? titleMatch[1] : postId
-    const content = postContent.replace(/^---\n[\s\S]*?\n---\n/, '')
+    const rawContent = postContent.replace(/^---\n[\s\S]*?\n---\n/, '')
 
-    // 生成预览页面（不调用FullPublishPipeline，避免状态转换）
-    const { generatePublishPage } = await import('../publish/page-generator.js')
+    // 导入预览服务器和转换器
+    const { createPreviewServer } = await import('../preview/server.js')
+    const { transformForJuejin, transformForWechat, markdownToHTML } = await import('@content-hub/transformer')
+    const open = await import('open')
 
-    const platforms = [
-      {
-        platform: 'juejin',
-        name: '掘金',
-        content: content
-      },
-      {
-        platform: 'wechat',
-        name: '微信公众号',
-        content: content
-      },
-      {
-        platform: 'html',
-        name: 'HTML',
-        content: content
+    // 创建预览内容缓存
+    const previewContentMap = new Map<string, any>()
+
+    const getPreviewContent = async (id: string, platform: string) => {
+      const cacheKey = `${platform}-${rawContent}`
+
+      if (!previewContentMap.has(cacheKey)) {
+        let transformedContent: string
+        let htmlContent: string
+
+        switch (platform) {
+          case 'juejin':
+            transformedContent = await transformForJuejin(rawContent)
+            htmlContent = await markdownToHTML(transformedContent)
+            break
+          case 'wechat':
+            transformedContent = await transformForWechat(rawContent)
+            htmlContent = await markdownToHTML(transformedContent)
+            break
+          case 'html':
+            transformedContent = await markdownToHTML(rawContent)
+            htmlContent = transformedContent
+            break
+          default:
+            transformedContent = rawContent
+            htmlContent = await markdownToHTML(rawContent)
+        }
+
+        previewContentMap.set(cacheKey, {
+          id,
+          title,
+          platform,
+          content: transformedContent,
+          html: htmlContent,
+          timestamp: new Date().toISOString()
+        })
       }
-    ]
 
-    const pagePath = await generatePublishPage(postId, title, content, platforms, {
-      openBrowser: true
-    })
+      return previewContentMap.get(cacheKey)
+    }
 
-    console.log(`   ✅ 预览页面已生成`)
-    console.log(`   路径: ${pagePath}`)
+    // 启动预览服务器
+    const server = await createPreviewServer(getPreviewContent)
+
+    console.log(`\n   ✅ 预览服务器已启动！端口: ${server.port}`)
+    console.log(`   📱 预览链接：`)
+
+    const platforms = ['juejin', 'wechat', 'html']
+    const platformNames: Record<string, string> = {
+      juejin: '掘金',
+      wechat: '微信公众号',
+      html: 'HTML'
+    }
+
+    for (const platform of platforms) {
+      const url = `http://localhost:${server.port}/preview/${platform}/${postId}`
+      console.log(`      ${platformNames[platform]}: ${url}`)
+    }
+
+    console.log(`\n   💡 提示：`)
+    console.log(`      - 在浏览器中打开以上链接查看各平台渲染效果`)
+    console.log(`      - 确认无误后返回终端继续发布`)
+    console.log(`      - 按 Ctrl+C 可取消发布\n`)
+
+    // 自动打开浏览器
+    try {
+      await open.default(`http://localhost:${server.port}/preview/juejin/${postId}`)
+      console.log(`   🌐 已在浏览器中打开掘金平台预览\n`)
+    } catch (error) {
+      console.log(`   ⚠️  无法自动打开浏览器，请手动访问上面的链接\n`)
+    }
 
     // 等待用户确认
-    const rl = createInterface({
-      input: process.stdin,
-      output: process.stdout
+    const prompts = await import('prompts')
+
+    const response = await prompts.default({
+      type: 'confirm',
+      name: 'confirmed',
+      message: '预览无误，是否继续发布？',
+      initial: false
     })
 
-    return new Promise((resolve, reject) => {
-      rl.question(`\n   确认继续发布？[y/N]: `, (answer) => {
-        rl.close()
+    // 关闭预览服务器
+    await server.stop()
+    console.log('   ✅ 预览服务器已关闭\n')
 
-        if (answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
-          console.log(`   ✅ 用户确认继续`)
-          resolve()
-        } else {
-          console.log(`   ❌ 用户取消发布`)
-          reject(new Error('用户取消发布'))
-        }
-      })
-    })
+    if (response.confirmed) {
+      console.log(`   ✅ 用户确认继续`)
+    } else {
+      console.log(`   ⏸️  用户取消发布`)
+      // 用户取消是正常操作，不是错误
+      // 抛出特殊的错误代码，让主进程区分是用户取消还是真正的错误
+      const error = new Error('USER_CANCELLED')
+      error.name = 'USER_CANCELLED'
+      throw error
+    }
   }
 
   /**
@@ -194,14 +257,43 @@ export class WorkflowOrchestrator {
     console.log(`\n⏪ 回滚: ${postId}`)
 
     try {
-      // 1. 移回 posts 目录
-      await this.fileMover.rollbackToPosts(postId)
+      const { existsSync } = await import('fs')
+      const { join } = await import('path')
+      const { PrismaClient } = await import('@prisma/client')
 
-      // 2. 更新状态
+      const postsPath = join(process.cwd(), 'content/posts', `${postId}.md`)
+      const donePath = join(process.cwd(), 'content/done', `${postId}.md`)
+
+      const inPosts = existsSync(postsPath)
+      const inDone = existsSync(donePath)
+
+      if (inPosts && !inDone) {
+        // 文件已在 posts 目录，只需要重置状态
+        console.log(`   📁 文件已在 posts 目录，跳过文件移动`)
+      } else if (inDone) {
+        // 文件在 done 目录，需要移动回 posts
+        await this.fileMover.rollbackToPosts(postId)
+      } else {
+        console.log(`   ⚠️  文件不存在，跳过文件移动`)
+      }
+
+      // 重置工作流状态
       await this.statusManager.updateStatus(
         postId,
         WorkflowStatusEnum.PENDING as any
       )
+
+      // 重置发布状态为 draft
+      const prisma = new PrismaClient()
+      try {
+        await prisma.post.update({
+          where: { postId },
+          data: { status: 'draft' }
+        })
+        console.log(`   ✅ 状态已重置: draft`)
+      } finally {
+        await prisma.$disconnect()
+      }
 
       console.log(`✅ 回滚完成: ${postId}\n`)
 

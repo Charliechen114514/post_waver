@@ -1,4 +1,4 @@
-import { markdownToHTML } from './to-html'
+import { markdownToHTML } from './to-html.js'
 import { generatePlatformLinks, formatLinksAsHTML } from '@content-hub/core'
 import type { IndexedPost } from '@content-hub/core'
 

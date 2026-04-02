@@ -43,8 +43,8 @@ async function sync() {
 
   // 读取索引
   console.log('📖 正在读取内容索引...')
-  const index = await readIndex()
-  if (!index) {
+  const indexMap = await readIndex()
+  if (!indexMap || indexMap.size === 0) {
     console.error('❌ 索引不存在，请先运行 pnpm scan')
     process.exit(1)
   }
@@ -55,7 +55,7 @@ async function sync() {
   console.log(`📋 使用 permalink 格式: ${permalinkPattern}`)
 
   // 过滤非草稿文章
-  const publishedPosts = Object.values(index.posts).filter(post => !post.draft)
+  const publishedPosts = Array.from(indexMap.values()).filter(post => !post.draft)
 
   console.log(`📊 找到 ${publishedPosts.length} 篇已发布文章`)
 
@@ -88,7 +88,7 @@ async function sync() {
       const content = await readFile(post.filepath, 'utf-8')
 
       // 注入关联信息（上/下篇、相关阅读）
-      const enhanced = injectRelatedLinks(content, post, index.posts, permalinkPattern)
+      const enhanced = injectRelatedLinks(content, post, indexMap, permalinkPattern)
 
       // 写入 Hexo 目录
       const outputFile = join(hexoDir, `${post.id}.md`)

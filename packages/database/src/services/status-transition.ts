@@ -1,7 +1,24 @@
 import { PrismaClient } from '@prisma/client'
 import { PostDAL, PostStatus } from '../dal/post.js'
 
-const prisma = new PrismaClient()
+let prismaInstance: PrismaClient | null = null
+
+function getPrisma(): PrismaClient {
+  if (!prismaInstance) {
+    prismaInstance = new PrismaClient()
+  }
+  return prismaInstance
+}
+
+/**
+ * 断开数据库连接
+ */
+export async function disconnectStatusTransition() {
+  if (prismaInstance) {
+    await prismaInstance.$disconnect()
+    prismaInstance = null
+  }
+}
 
 export class StatusTransitionService {
   private static transitions: Record<PostStatus, PostStatus[]> = {
@@ -44,6 +61,7 @@ export class StatusTransitionService {
       )
     }
 
+    const prisma = getPrisma()
     const updated = await prisma.post.update({
       where: { postId },
       data: {

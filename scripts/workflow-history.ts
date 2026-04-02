@@ -31,4 +31,7 @@ async function main() {
   }
 }
 
-main()
+main().catch(error => {
+  console.error('查询历史失败:', error)
+  process.exit(1)
+}).then(() => process.exit(0))

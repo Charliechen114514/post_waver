@@ -3,10 +3,15 @@ import { WorkflowOrchestrator } from '../packages/engine/src/workflow/orchestrat
 async function main() {
   const orchestrator = new WorkflowOrchestrator()
 
-  await orchestrator.scanAndInitialize()
+  try {
+    await orchestrator.scanAndInitialize()
+  } catch (error) {
+    console.error('扫描失败:', error)
+    process.exit(1)
+  }
 }
 
 main().catch(error => {
   console.error('扫描失败:', error)
   process.exit(1)
-})
+}).then(() => process.exit(0))

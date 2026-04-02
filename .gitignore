@@ -36,6 +36,7 @@ content-index.json
 # 测试
 coverage/
 .nyc_output/
+.post-waver/
 
 # 本地开发使用的阶段脚本
 milestones/
@@ -48,3 +49,26 @@ blog/themes/butterfly/.git/
 
 # Milestone documents (internal use only)
 milestones/
+
+# TypeScript 编译产物（除了 dist/ 目录和特定脚本）
+*.d.ts
+*.d.ts.map
+*.js
+!dist/**/*.js
+!scripts/remark-lint-custom.js
+!**/*.ts
+
+# 数据库文件
+*.db
+*.db-journal
+packages/database/prisma/*.db
+
+# 本地私有配置（包含敏感信息）
+packages/database/prisma/seed.local.ts
+packages/database/prisma/seed.local.js
+
+# 临时测试文件
+test-*.md
+*_session.md
+*_CHANGE.md
+TESTING_*.md

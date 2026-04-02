@@ -11,4 +11,7 @@ async function main() {
   }
 }
 
-main()
+main().catch(error => {
+  console.error('\n批量处理失败:', error)
+  process.exit(1)
+}).then(() => process.exit(0))

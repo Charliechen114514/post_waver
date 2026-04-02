@@ -1,8 +1,7 @@
 import { glob } from 'glob'
-import { readFile, writeFile } from 'fs/promises'
-import { Post, ScanResult, ContentIndex, IndexedPost } from './types.js'
+import { Post, ScanResult, IndexedPost } from './types.js'
 import { parsePost } from './parser.js'
-import { LinkOrchestrator } from '@content-hub/linker'
+import { ContentIndexService } from '@content-hub/database'
 
 /**
  * 扫描目录下的所有 Markdown 文件
@@ -52,58 +51,88 @@ export function filterDrafts(posts: Post[]): Post[] {
 }
 
 /**
- * 读取索引文件
+ * 从数据库读取所有索引
  */
-export async function readIndex(
-  filepath: string = 'content-index.json'
-): Promise<ContentIndex | null> {
+export async function readIndex(): Promise<Map<string, IndexedPost>> {
   try {
-    const content = await readFile(filepath, 'utf-8')
-    return JSON.parse(content) as ContentIndex
+    const allPosts = await ContentIndexService.getAll()
+    const indexMap = new Map<string, IndexedPost>()
+
+    for (const post of allPosts) {
+      indexMap.set(post.id, {
+        id: post.id,
+        title: post.title,
+        date: post.date.toISOString(),
+        tags: JSON.parse(post.tags),
+        contentHash: post.contentHash,
+        filepath: post.filepath,
+        draft: post.draft,
+        prev: post.prev || undefined,
+        next: post.next || undefined,
+        related: post.related ? JSON.parse(post.related) : undefined
+      })
+    }
+
+    return indexMap
   } catch (error) {
-    // 文件不存在或解析失败
-    return null
+    // 数据库读取失败
+    console.error('[Scanner] Failed to read index from database:', error)
+    return new Map()
   }
 }
 
 /**
- * 写入索引文件
+ * 写入索引到数据库
  */
-export async function writeIndex(
-  index: ContentIndex,
-  filepath: string = 'content-index.json'
-): Promise<void> {
-  const content = JSON.stringify(index, null, 2)
-  await writeFile(filepath, content, 'utf-8')
+export async function writeIndex(indexMap: Map<string, IndexedPost>): Promise<void> {
+  try {
+    const posts = Array.from(indexMap.values()).map(indexedPost => ({
+      id: indexedPost.id,
+      title: indexedPost.title,
+      date: new Date(indexedPost.date),
+      tags: indexedPost.tags,
+      contentHash: indexedPost.contentHash,
+      filepath: indexedPost.filepath,
+      draft: indexedPost.draft,
+      prev: indexedPost.prev,
+      next: indexedPost.next,
+      related: indexedPost.related
+    }))
+
+    await ContentIndexService.upsertMany(posts)
+  } catch (error) {
+    console.error('[Scanner] Failed to write index to database:', error)
+    throw error
+  }
 }
 
 /**
  * 检测新文章
  */
 export function detectNewPosts(
-  index: ContentIndex | null,
+  index: Map<string, IndexedPost>,
   posts: Post[]
 ): Post[] {
-  if (!index) {
+  if (index.size === 0) {
     return posts // 没有索引，所有文章都是新的
   }
 
-  return posts.filter(post => !index.posts[post.id])
+  return posts.filter(post => !index.has(post.id))
 }
 
 /**
  * 检测已更新文章
  */
 export function detectUpdatedPosts(
-  index: ContentIndex | null,
+  index: Map<string, IndexedPost>,
   posts: Post[]
 ): Post[] {
-  if (!index) {
+  if (index.size === 0) {
     return []
   }
 
   return posts.filter(post => {
-    const indexed = index.posts[post.id]
+    const indexed = index.get(post.id)
     return indexed && indexed.contentHash !== post.contentHash
   })
 }
@@ -111,8 +140,8 @@ export function detectUpdatedPosts(
 /**
  * 构建索引
  */
-export async function buildIndex(posts: Post[]): Promise<ContentIndex> {
-  const indexedPosts: Record<string, IndexedPost> = {}
+export async function buildIndex(posts: Post[]): Promise<Map<string, IndexedPost>> {
+  const indexedPosts = new Map<string, IndexedPost>()
   const allTags = new Set<string>()
   let draftCount = 0
 
@@ -126,7 +155,7 @@ export async function buildIndex(posts: Post[]): Promise<ContentIndex> {
     }
 
     // 创建索引条目
-    indexedPosts[post.id] = {
+    indexedPosts.set(post.id, {
       id: post.id,
       title: post.frontmatter.title,
       date: post.frontmatter.date,
@@ -135,16 +164,19 @@ export async function buildIndex(posts: Post[]): Promise<ContentIndex> {
       filepath: post.filepath,
       draft: post.frontmatter.draft || false
       // prev, next, related 将在下面通过 LinkOrchestrator 添加
-    }
+    })
   }
 
   // 生成关联关系 (prev/next/related)
   try {
+    // 动态导入 LinkOrchestrator 避免编译时的循环依赖问题
+    // @ts-ignore - workspace 包路径在运行时可用
+    const { LinkOrchestrator } = await import('@content-hub/linker')
     const orchestrator = new LinkOrchestrator()
     const relationships = await orchestrator.generateRelationships(posts)
 
     // 注入关联关系到索引条目
-    for (const [id, indexedPost] of Object.entries(indexedPosts)) {
+    for (const [id, indexedPost] of indexedPosts.entries()) {
       // 添加时间关系
       if (relationships.prevNext.has(id)) {
         const rel = relationships.prevNext.get(id)!
@@ -165,16 +197,13 @@ export async function buildIndex(posts: Post[]): Promise<ContentIndex> {
     // 继续构建索引，不包含 prev/next/related 字段
   }
 
-  return {
-    version: 1,
-    posts: indexedPosts,
-    lastUpdated: new Date().toISOString(),
-    metadata: {
-      totalPosts: posts.length,
-      draftCount,
-      allTags: Array.from(allTags).sort()
-    }
-  }
+  console.log('[Scanner] Index built:', {
+    totalPosts: posts.length,
+    draftCount,
+    allTags: Array.from(allTags).sort()
+  })
+
+  return indexedPosts
 }
 
 /**

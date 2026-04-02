@@ -9,14 +9,18 @@ program
   .description('扫描内容目录并生成索引')
   .option('-d, --dir <directory>', '扫描目录', 'content/posts')
   .option('-r, --recursive', '递归扫描子目录', true)
-  .option('--include-drafts', '包含草稿文章', false)
+  .option('--include-drafts', '包含草稿文章（默认：包含所有）', true)
+  .option('--exclude-drafts', '排除草稿文章', false)
   .option('--update-index', '更新索引文件', true)
-  .option('-o, --output <format>', '输出格式 (json|table)', 'json')
+  .option('-o, --output <format>', '输出格式 (json|table|summary)', 'table')
   .action(async (options) => {
     try {
+      // 如果指定了 --exclude-drafts，则不包含草稿；否则默认包含所有
+      const includeDrafts = !options.excludeDrafts
+
       const result = await scan(options.dir, {
         recursive: options.recursive,
-        includeDrafts: options.includeDrafts,
+        includeDrafts: includeDrafts,
         updateIndex: options.updateIndex
       })
 
@@ -32,6 +36,7 @@ program
         })))
       }
 
+      // summary 模式或任何模式下都显示简短摘要
       console.log(`\n✅ 扫描完成:`)
       console.log(`   - 总文章数: ${result.posts.length}`)
       console.log(`   - 新文章: ${result.newPosts.length}`)

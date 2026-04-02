@@ -1,11 +1,13 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import PostList from './pages/PostList'
 import PostDetail from './pages/PostDetail'
+import DeploymentBanner from './components/DeploymentBanner'
 
 export default function App() {
   return (
     <BrowserRouter basename="/post_waver">
       <div className="app">
+        <DeploymentBanner />
         <header className="app-header">
           <h1>Content Hub</h1>
           <p className="subtitle">内容管理与发布平台</p>

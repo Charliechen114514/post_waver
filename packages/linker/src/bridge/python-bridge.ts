@@ -203,7 +203,13 @@ export class PythonBridge {
 
         if (code !== 0) {
           const errorMsg = stderr.trim() || `Python script exited with code ${code}`
-          reject(new Error(`Python script failed: ${errorMsg}`))
+
+          // Detect common Python errors and provide context
+          if (errorMsg.includes('ModuleNotFoundError') || errorMsg.includes('No module named')) {
+            reject(new Error(`Python dependency missing: ${errorMsg.split('\n').pop()}`))
+          } else {
+            reject(new Error(`Python script failed: ${errorMsg}`))
+          }
           return
         }
 
@@ -304,7 +310,19 @@ export class PythonBridge {
 
     } catch (error) {
       // Log error but don't throw - let caller decide on fallback
-      console.warn('[PythonBridge] TF-IDF calculation failed:', error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+
+      // Detect common Python errors and provide friendly messages
+      if (errorMessage.includes('Python dependency missing') || errorMessage.includes('No module named')) {
+        // Silent - just use TagMatcher
+      } else if (errorMessage.includes('Failed to spawn Python process')) {
+        console.warn('[PythonBridge] 未找到Python，使用标签匹配')
+      } else if (errorMessage.includes('timeout')) {
+        console.warn('[PythonBridge] Python计算超时，使用标签匹配')
+      } else {
+        // Other errors - silent fallback
+      }
+
       return null
     }
   }

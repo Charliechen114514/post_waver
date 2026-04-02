@@ -1,4 +1,4 @@
-import { PostDAL } from '@content-hub/database/dist/dal/post.js'
+import { PostDAL } from '@content-hub/database'
 import type { PrismaClient } from '@prisma/client'
 
 // Prisma client instance (lazy loaded)
@@ -10,6 +10,16 @@ function getPrismaClient(): PrismaClient {
     prismaInstance = new PrismaClient() as any
   }
   return prismaInstance
+}
+
+/**
+ * 关闭数据库连接
+ */
+export async function disconnectPrisma() {
+  if (prismaInstance) {
+    await prismaInstance.$disconnect()
+    prismaInstance = null
+  }
 }
 
 export class PublishHistoryManager {

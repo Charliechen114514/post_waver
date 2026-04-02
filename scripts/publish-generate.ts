@@ -7,7 +7,7 @@ import open from 'open'
 async function main() {
   const postId = process.argv[2]
   if (!postId) {
-    console.error('Usage: pnpm publish:generate <postId>')
+    console.error('Usage: pnpm post:publish:generate <postId>')
     process.exit(1)
   }
 

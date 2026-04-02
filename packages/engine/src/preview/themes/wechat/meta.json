@@ -1,0 +1,23 @@
+{
+  "default": "simple",
+  "themes": [
+    {
+      "name": "simple",
+      "displayName": "简约风格",
+      "description": "极简设计，适合技术文章。17px字号，1.6行高，舒适的阅读体验。",
+      "cssFile": "simple.css"
+    },
+    {
+      "name": "fresh",
+      "displayName": "清新风格",
+      "description": "明亮色彩，适合生活分享。更大行间距，圆润的视觉风格。",
+      "cssFile": "fresh.css"
+    },
+    {
+      "name": "business",
+      "displayName": "商务风格",
+      "description": "专业稳重，适合商业内容。深色调，衬线字体标题，更紧凑的排版。",
+      "cssFile": "business.css"
+    }
+  ]
+}
