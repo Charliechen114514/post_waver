@@ -7,7 +7,7 @@
     "dev": "tsx scripts/dev.ts",
     "dev:web": "pnpm --filter web-ui dev",
     "dev:api": "tsx scripts/api-server.ts",
-    "build": "pnpm -r build",
+    "build": "pnpm -r --workspace-concurrency=1 run build",
     "lint": "pnpm lint:md && pnpm lint:ts",
     "lint:md": "markdownlint-cli2 '**/*.md'",
     "lint:md:fix": "markdownlint-cli2 --fix '**/*.md'",
@@ -38,7 +38,11 @@
     "platform:id:remove": "tsx scripts/update-platform-id.ts remove",
     "platform:id:status": "tsx scripts/update-platform-id.ts status",
     "platform:id:import": "tsx scripts/update-platform-id.ts import",
-    "platform:id:list": "tsx scripts/update-platform-id.ts list"
+    "platform:id:list": "tsx scripts/update-platform-id.ts list",
+    "test:workflow:full": "bash scripts/test-workflow-local.sh",
+    "test:build": "pnpm build && pnpm --filter @content-hub/web-ui build",
+    "test:workflow:act": "act -j deploy -n",
+    "preview:prod": "pnpm --filter @content-hub/web-ui preview --host 0.0.0.0 --port 4173"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

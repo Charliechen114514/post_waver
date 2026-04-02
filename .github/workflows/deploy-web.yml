@@ -32,19 +32,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'pnpm'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          if [ "$ACT" = "true" ]; then
+            # 本地测试环境：不检查 lockfile
+            pnpm install --no-frozen-lockfile
+          else
+            # CI 环境：严格检查 lockfile
+            pnpm install --frozen-lockfile
+          fi
+        env:
+          ACT: ${{ secrets.ACT }}
 
       - name: Build packages
         run: pnpm build
@@ -54,12 +63,15 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
+        if: ${{ env.ACT != 'true' }}  # 跳过本地测试
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
+        if: ${{ env.ACT != 'true' }}  # 跳过本地测试
         with:
           path: ./packages/web-ui/dist
 
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        if: ${{ env.ACT != 'true' }}  # 跳过本地测试
