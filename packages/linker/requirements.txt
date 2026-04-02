@@ -1,0 +1,6 @@
+# Python dependencies for TF-IDF content similarity calculation
+# Used by packages/linker/scripts/calculate_tfidf.py
+
+jieba>=0.42.1
+scikit-learn>=1.3.0
+numpy>=1.24.0

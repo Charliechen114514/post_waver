@@ -35,26 +35,45 @@ pnpm install
 
 ### Initialize Your Blog
 
-post_waver requires a Hexo blog to sync content. You have two options:
+post_waver requires a Hexo blog to sync content. The `blog/` directory is **not tracked by git** - each user manages their own blog configuration.
 
-**Option 1: Use existing Hexo blog**
+You have several options:
+
+**Option 1: Use existing Hexo blog (Recommended)**
 ```bash
-# Create symlink or copy your blog
+# Create symlink to your existing blog
 ln -s /path/to/your/hexo/blog ./blog
 ```
 
-**Option 2: Initialize new Hexo blog**
+**Option 2: Clone your private blog repository**
 ```bash
-# Install Hexo globally
+# If you have your blog in a private repo
+git clone git@github.com:username/my-private-blog.git blog
+```
+
+**Option 3: Initialize new Hexo blog**
+```bash
+# Install Hexo CLI
 pnpm add -g hexo-cli
 
-# Initialize blog in current directory
+# Initialize blog
 hexo init blog
 cd blog
 pnpm install
 ```
 
-> **Note**: The `blog/` directory is in `.gitignore` - each user manages their own blog.
+**Optional: Set up version control for your blog**
+```bash
+cd blog
+git init
+git remote add origin <your-private-repo-url>
+
+# After syncing content with post_waver
+cd ..
+pnpm sync:blog  # Uses scripts/update-blog.sh to commit & push
+```
+
+> **Important**: The `blog/` directory is in `.gitignore` because it contains your personal blog configuration and should not be shared with the post_waver repository.
 
 ### First Run
 

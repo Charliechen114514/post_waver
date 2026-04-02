@@ -2,6 +2,7 @@ import { glob } from 'glob'
 import { readFile, writeFile } from 'fs/promises'
 import { Post, ScanResult, ContentIndex, IndexedPost } from './types.js'
 import { parsePost } from './parser.js'
+import { LinkOrchestrator } from '@content-hub/linker'
 
 /**
  * 扫描目录下的所有 Markdown 文件
@@ -133,8 +134,35 @@ export async function buildIndex(posts: Post[]): Promise<ContentIndex> {
       contentHash: post.contentHash,
       filepath: post.filepath,
       draft: post.frontmatter.draft || false
-      // prev, next, related 在后续里程碑中添加
+      // prev, next, related 将在下面通过 LinkOrchestrator 添加
     }
+  }
+
+  // 生成关联关系 (prev/next/related)
+  try {
+    const orchestrator = new LinkOrchestrator()
+    const relationships = await orchestrator.generateRelationships(posts)
+
+    // 注入关联关系到索引条目
+    for (const [id, indexedPost] of Object.entries(indexedPosts)) {
+      // 添加时间关系
+      if (relationships.prevNext.has(id)) {
+        const rel = relationships.prevNext.get(id)!
+        indexedPost.prev = rel.prev
+        indexedPost.next = rel.next
+      }
+
+      // 添加语义关系
+      if (relationships.related.has(id)) {
+        indexedPost.related = relationships.related.get(id)
+      }
+    }
+
+    console.log('[Scanner] Relationship generation completed successfully')
+  } catch (error) {
+    // 关系生成失败不应阻止索引构建
+    console.warn('[Scanner] Relationship generation failed, building index without relationships:', error)
+    // 继续构建索引，不包含 prev/next/related 字段
   }
 
   return {

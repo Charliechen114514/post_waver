@@ -21,7 +21,11 @@
     "scan:table": "npx tsx scripts/scan.ts --dir content/posts --output table",
     "scan:drafts": "npx tsx scripts/scan.ts --dir content/posts --include-drafts --output table",
     "index:rebuild": "npx tsx scripts/scan.ts --dir content/posts --include-drafts",
-    "sync:blog": "bash scripts/update-blog.sh"
+    "sync:hexo": "npx tsx scripts/sync-to-hexo.ts",
+    "sync:blog": "bash scripts/update-blog.sh",
+    "migrate-images": "tsx scripts/migrate-images.ts",
+    "python:install": "cd packages/linker && pip3 install -r requirements.txt",
+    "test:migrate-images": "bash test/scripts/test-migrate-images.sh"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

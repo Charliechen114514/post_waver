@@ -32,10 +32,16 @@ console.log(greeting);
 ### 使用本地资源
 
 ```markdown
-![示例图片](/assets/images/screenshot.png)
+![测试图片](/assets/images/test.png)
 ```
 
-![示例图片](https://via.placeholder.com/800x200/0078D7/FFFFFF?text=Content-Hub+Example)
+![测试图片](/assets/images/test.png)
+
+### 使用外部图床
+
+```markdown
+![示例图片](https://img.shields.io/badge/example-success)
+```
 
 ### 使用外部图床
 
