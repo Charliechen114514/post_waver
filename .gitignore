@@ -40,6 +40,8 @@ coverage/
 # 本地开发使用的阶段脚本
 milestones/
 
+content/
+output/
 
 # Butterfly theme - remove nested git repo
 blog/themes/butterfly/.git/

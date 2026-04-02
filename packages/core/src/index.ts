@@ -18,3 +18,6 @@ export * from './repo-injector.js'
 
 // Export platform link generator functions
 export * from './platform-link-generator.js'
+
+// Export HashID generator functions
+export * from './hashid-generator.js'

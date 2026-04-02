@@ -1,0 +1,22 @@
+{
+  "autoSync": {
+    "enabled": false,
+    "blogPath": "./blog",
+    "commitMessage": "docs: sync post from post_waver"
+  },
+  "cleanup": {
+    "enabled": true,
+    "retainDays": 30
+  },
+  "platforms": {
+    "juejin": {
+      "enabled": true,
+      "autoCopy": true
+    },
+    "wechat": {
+      "enabled": true,
+      "autoCopy": true
+    }
+  },
+  "autoSync.enabled": true
+}
