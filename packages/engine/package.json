@@ -4,6 +4,12 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -14,7 +20,9 @@
     "@content-hub/linker": "workspace:*",
     "@content-hub/transformer": "workspace:*",
     "@content-hub/adapter": "workspace:*",
-    "hono": "^3.11.0",
+    "@hono/node-server": "^1.8.2",
+    "clipboardy": "^4.0.0",
+    "hono": "^4.0.0",
     "dotenv": "^16.3.1"
   }
 }

@@ -12,3 +12,6 @@ export * from './image-resolver.js'
 
 // Export link injector functions
 export * from './link-injector.js'
+
+// Export repo injector functions
+export * from './repo-injector.js'

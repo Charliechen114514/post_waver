@@ -25,7 +25,13 @@
     "sync:blog": "bash scripts/update-blog.sh",
     "migrate-images": "tsx scripts/migrate-images.ts",
     "python:install": "cd packages/linker && pip3 install -r requirements.txt",
-    "test:migrate-images": "bash test/scripts/test-migrate-images.sh"
+    "test:migrate-images": "bash test/scripts/test-migrate-images.sh",
+    "transform:html": "tsx scripts/transform.ts html",
+    "transform:wechat": "tsx scripts/transform.ts wechat",
+    "transform:juejin": "tsx scripts/transform.ts juejin",
+    "preview:wechat": "tsx scripts/preview.ts wechat",
+    "preview:juejin": "tsx scripts/preview.ts juejin",
+    "preview:html": "tsx scripts/preview.ts html"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
@@ -35,6 +41,7 @@
     "husky": "^8.0.3",
     "lint-staged": "^15.2.0",
     "markdownlint-cli2": "^0.22.0",
+    "open": "^10.0.0",
     "prettier": "^3.2.0",
     "remark-cli": "^12.0.1",
     "remark-frontmatter": "^5.0.0",
