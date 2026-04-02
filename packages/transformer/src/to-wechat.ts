@@ -1,10 +1,39 @@
 import { markdownToHTML } from './to-html'
+import { generatePlatformLinks, formatLinksAsHTML } from '@content-hub/core'
+import type { IndexedPost } from '@content-hub/core'
+
+/**
+ * 微信转换器选项
+ */
+export interface WechatTransformOptions {
+  /** 文章ID */
+  postId?: string
+  /** 相关文章列表 */
+  relatedPosts?: IndexedPost[]
+  /** 博客基础URL */
+  blogBaseUrl?: string
+  /** 是否添加相关文章链接 */
+  includeRelatedLinks?: boolean
+}
 
 /**
  * 将 Markdown 转换为微信公众号格式的 HTML（带内联样式）
  */
-export async function transformForWechat(markdown: string): Promise<string> {
-  const html = await markdownToHTML(markdown)
+export async function transformForWechat(
+  markdown: string,
+  options?: WechatTransformOptions
+): Promise<string> {
+  let html = await markdownToHTML(markdown)
+
+  // 如果提供了相关文章信息，生成平台链接HTML
+  let relatedLinksHTML = ''
+  if (options?.includeRelatedLinks && options.postId && options.relatedPosts) {
+    const links = generatePlatformLinks(options.postId, options.relatedPosts, {
+      platform: 'wechat',
+      blogBaseUrl: options.blogBaseUrl || 'https://your-blog.github.io/'
+    })
+    relatedLinksHTML = formatLinksAsHTML(links, 'wechat')
+  }
 
   // 为微信公众号添加内联样式
   const styled = html
@@ -38,6 +67,11 @@ export async function transformForWechat(markdown: string): Promise<string> {
     .replace(/<img /g, '<img style="max-width: 100%; height: auto; display: block; margin: 20px auto;" ')
     // 分隔线样式
     .replace(/<hr>/g, '<hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">')
+
+  // 添加相关文章链接（如果有的话）
+  if (relatedLinksHTML) {
+    return styled + '\n\n' + relatedLinksHTML
+  }
 
   return styled
 }

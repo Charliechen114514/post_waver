@@ -1,0 +1,95 @@
+.platform-id-manager {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  margin-top: 32px;
+}
+
+.platform-id-manager h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #333;
+}
+
+.platform-id-manager > div:last-child {
+  margin-bottom: 0;
+}
+
+.platform-card {
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.platform-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.platform-card h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.platform-status {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.platform-status.published {
+  color: #22c55e;
+}
+
+.platform-status.unpublished {
+  color: #999;
+}
+
+.platform-info {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.platform-info p {
+  margin: 4px 0;
+  color: #666;
+}
+
+.platform-info strong {
+  color: #333;
+}
+
+.platform-info a {
+  color: #667eea;
+  text-decoration: none;
+}
+
+.platform-info a:hover {
+  text-decoration: underline;
+}
+
+.platform-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.platform-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.platform-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "mappings": {
+    "test-post-1": {
+      "juejin": {
+        "postId": "7123456789",
+        "url": "https://juejin.cn/post/7123456789",
+        "publishedAt": "2026-04-02T02:29:58.237Z"
+      }
+    }
+  },
+  "lastUpdated": "2026-04-02T02:29:58.240Z"
+}

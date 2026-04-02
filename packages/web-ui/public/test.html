@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>测试页面</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+    }
+    h1 { color: #667eea; }
+    .success { color: green; }
+    .error { color: red; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 post_waver 测试页面</h1>
+    <p>如果你能看到这个页面，说明 Web UI 服务器正常工作！</p>
+
+    <h2>API 测试</h2>
+    <button onclick="testAPI()">测试 API 连接</button>
+    <pre id="api-result"></pre>
+
+    <h2>文章列表</h2>
+    <button onclick="loadPosts()">加载文章列表</button>
+    <pre id="posts-result"></pre>
+  </div>
+
+  <script>
+    async function testAPI() {
+      const result = document.getElementById('api-result');
+      try {
+        const response = await fetch('/post_waver/api/health');
+        const data = await response.json();
+        result.textContent = '✅ API 连接成功: ' + JSON.stringify(data, null, 2);
+        result.className = 'success';
+      } catch (error) {
+        result.textContent = '❌ API 连接失败: ' + error.message;
+        result.className = 'error';
+      }
+    }
+
+    async function loadPosts() {
+      const result = document.getElementById('posts-result');
+      try {
+        const response = await fetch('/post_waver/api/posts');
+        const data = await response.json();
+        result.textContent = '✅ 找到 ' + data.posts.length + ' 篇文章:\n\n' +
+          data.posts.map(p => `- ${p.title} (${p.date})`).join('\n');
+        result.className = 'success';
+      } catch (error) {
+        result.textContent = '❌ 加载失败: ' + error.message;
+        result.className = 'error';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { CopyButton } from '../components/CopyButton'
+import { PlatformIdManager } from '../components/PlatformIdManager'
 
 interface Frontmatter {
   title: string
@@ -21,14 +23,16 @@ interface Post {
   related?: Array<{ id: string; title: string; score: number }>
 }
 
+type Platform = 'juejin' | 'wechat' | 'html'
+
 export default function PostDetail() {
   const { id } = useParams<{ id: string }>()
   const [post, setPost] = useState<Post | null>(null)
-  const [previewContent, setPreviewContent] = useState<{ content: string; title: string } | null>(null)
+  const [transformedContent, setTransformedContent] = useState('')
+  const [selectedPlatform, setSelectedPlatform] = useState<Platform>('juejin')
   const [loading, setLoading] = useState(true)
-  const [previewLoading, setPreviewLoading] = useState(false)
+  const [transforming, setTransforming] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showPreview, setShowPreview] = useState(false)
 
   useEffect(() => {
     if (id) {
@@ -38,7 +42,7 @@ export default function PostDetail() {
 
   const fetchPost = async (postId: string) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/posts/${postId}`)
+      const response = await fetch(`/api/posts/${postId}`)
       if (!response.ok) {
         throw new Error('获取文章详情失败')
       }
@@ -51,30 +55,29 @@ export default function PostDetail() {
     }
   }
 
-  const handlePreview = async (platform: 'juejin' | 'wechat') => {
+  const handleTransform = async () => {
     if (!id) return
 
-    setPreviewLoading(true)
+    setTransforming(true)
     try {
-      const response = await fetch(`http://localhost:3001/api/posts/${id}/preview`, {
+      const response = await fetch(`/api/posts/${id}/preview`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ platform })
+        body: JSON.stringify({ platform: selectedPlatform })
       })
 
       if (!response.ok) {
-        throw new Error('预览失败')
+        throw new Error('转换失败')
       }
 
       const data = await response.json()
-      setPreviewContent({ content: data.content, title: data.title })
-      setShowPreview(true)
+      setTransformedContent(data.content)
     } catch (err) {
-      alert(err instanceof Error ? err.message : '预览失败')
+      alert(err instanceof Error ? err.message : '转换失败')
     } finally {
-      setPreviewLoading(false)
+      setTransforming(false)
     }
   }
 
@@ -119,46 +122,83 @@ export default function PostDetail() {
           </div>
         </header>
 
+        {/* 平台内容转换和复制 */}
         <div className="actions">
-          <h3>发布操作</h3>
+          <h3>📋 发布到平台</h3>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+              选择目标平台：
+            </label>
+            <select
+              value={selectedPlatform}
+              onChange={(e) => setSelectedPlatform(e.target.value as Platform)}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '6px',
+                border: '1px solid #ddd',
+                fontSize: '14px',
+                minWidth: '200px'
+              }}
+            >
+              <option value="juejin">掘金</option>
+              <option value="wechat">微信公众号</option>
+              <option value="html">HTML</option>
+            </select>
+          </div>
+
           <div className="button-group">
             <button
               className="btn btn-primary"
-              onClick={() => handlePreview('juejin')}
-              disabled={previewLoading}
+              onClick={handleTransform}
+              disabled={transforming}
             >
-              {previewLoading ? '加载中...' : '预览掘金'}
+              {transforming ? '转换中...' : '🔄 转换内容'}
             </button>
-            <button
-              className="btn btn-primary"
-              onClick={() => handlePreview('wechat')}
-              disabled={previewLoading}
-            >
-              {previewLoading ? '加载中...' : '预览微信'}
-            </button>
+
+            {transformedContent && (
+              <CopyButton
+                content={transformedContent}
+                platform={selectedPlatform}
+                onSuccess={() => alert('✅ 已复制到剪贴板！')}
+                onError={(err) => alert(`❌ 复制失败: ${err.message}`)}
+              />
+            )}
           </div>
         </div>
 
-        {showPreview && previewContent && (
+        {/* 转换后的内容预览 */}
+        {transformedContent && (
           <div className="preview-section">
             <div className="preview-header">
-              <h3>预览内容</h3>
-              <button
-                className="btn btn-secondary"
-                onClick={() => setShowPreview(false)}
-              >
-                关闭预览
-              </button>
+              <h3>📝 转换后内容预览</h3>
             </div>
             <div className="preview-content">
-              <h4>{previewContent.title}</h4>
-              <div
-                dangerouslySetInnerHTML={{ __html: previewContent.content }}
-              />
+              <pre style={{
+                whiteSpace: 'pre-wrap',
+                wordWrap: 'break-word',
+                fontSize: '14px',
+                lineHeight: '1.6',
+                maxHeight: '400px',
+                overflow: 'auto'
+              }}>
+                {transformedContent}
+              </pre>
             </div>
           </div>
         )}
 
+        {/* 平台ID管理 */}
+        {id && (
+          <div style={{ marginTop: '32px' }}>
+            <PlatformIdManager
+              postId={id}
+              onUpdate={() => console.log('平台ID已更新')}
+            />
+          </div>
+        )}
+
+        {/* 文章导航 */}
         {post.prev && (
           <div className="navigation prev">
             <span className="nav-label">上一篇：</span>
@@ -173,6 +213,7 @@ export default function PostDetail() {
           </div>
         )}
 
+        {/* 相关文章 */}
         {post.related && post.related.length > 0 && (
           <div className="related-posts">
             <h3>相关文章</h3>

@@ -15,3 +15,6 @@ export * from './link-injector.js'
 
 // Export repo injector functions
 export * from './repo-injector.js'
+
+// Export platform link generator functions
+export * from './platform-link-generator.js'

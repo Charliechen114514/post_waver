@@ -4,6 +4,11 @@ import { cors } from 'hono/cors'
 import { readIndex } from '@content-hub/core'
 import { parsePost } from '@content-hub/core'
 import { transformForJuejin, transformForWechat } from '@content-hub/transformer'
+import {
+  loadPlatformIds,
+  savePlatformIds,
+  getAllPlatformIds
+} from '@content-hub/core'
 
 /**
  * API Server 接口
@@ -118,6 +123,78 @@ export async function createAPIServer(options: {
     } catch (error) {
       console.error('预览失败:', error)
       return c.json({ error: '预览失败' }, 500)
+    }
+  })
+
+  // 获取文章的平台ID信息
+  app.get('/api/platform-ids/:postId', async (c) => {
+    try {
+      const { postId } = c.req.param()
+      const platformIds = getAllPlatformIds(postId)
+      return c.json(platformIds)
+    } catch (error) {
+      console.error('获取平台ID失败:', error)
+      return c.json({ error: '获取平台ID失败' }, 500)
+    }
+  })
+
+  // 更新文章的平台ID
+  app.post('/api/platform-ids/:postId', async (c) => {
+    try {
+      const { postId } = c.req.param()
+      const { platform, postId: platformPostId, url } = await c.req.json()
+
+      if (!platform || !platformPostId) {
+        return c.json({ error: '缺少必要参数' }, 400)
+      }
+
+      const platformIds = loadPlatformIds()
+
+      // 初始化文章映射
+      if (!platformIds.mappings[postId]) {
+        platformIds.mappings[postId] = {}
+      }
+
+      // 更新平台ID
+      platformIds.mappings[postId][platform] = {
+        postId: platformPostId,
+        url,
+        publishedAt: new Date().toISOString()
+      }
+
+      savePlatformIds(platformIds)
+
+      return c.json({
+        success: true,
+        message: '平台ID更新成功'
+      })
+    } catch (error) {
+      console.error('更新平台ID失败:', error)
+      return c.json({ error: '更新平台ID失败' }, 500)
+    }
+  })
+
+  // 删除文章的平台ID
+  app.delete('/api/platform-ids/:postId/:platform', async (c) => {
+    try {
+      const { postId, platform } = c.req.param()
+
+      const platformIds = loadPlatformIds()
+
+      if (platformIds.mappings[postId]?.[platform]) {
+        delete platformIds.mappings[postId][platform]
+        savePlatformIds(platformIds)
+
+        return c.json({
+          success: true,
+          message: '平台ID删除成功'
+        })
+      } else {
+        return c.json({ error: '平台ID不存在' }, 404)
+      }
+    } catch (error) {
+      console.error('删除平台ID失败:', error)
+      return c.json({ error: '删除平台ID失败' }, 500)
     }
   })
 

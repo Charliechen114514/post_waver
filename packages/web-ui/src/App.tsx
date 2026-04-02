@@ -4,7 +4,7 @@ import PostDetail from './pages/PostDetail'
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/post_waver">
       <div className="app">
         <header className="app-header">
           <h1>Content Hub</h1>

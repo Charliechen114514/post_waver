@@ -168,3 +168,55 @@ export interface ScanResult {
   /** 扫描耗时（毫秒） */
   duration: number
 }
+
+/**
+ * 平台发布信息
+ */
+export interface PlatformPublishInfo {
+  /** 平台文章ID */
+  postId: string
+  /** 文章URL（可选，微信公众号没有公开URL） */
+  url?: string
+  /** 发布时间（ISO8601格式） */
+  publishedAt?: string
+}
+
+/**
+ * 平台ID映射（单篇文章）
+ */
+export interface PlatformIdMapping {
+  /** 掘金发布信息 */
+  juejin?: PlatformPublishInfo
+  /** 知乎发布信息 */
+  zhihu?: PlatformPublishInfo
+  /** CSDN发布信息 */
+  csdn?: PlatformPublishInfo
+  /** 微信公众号发布信息 */
+  wechat?: PlatformPublishInfo
+  /** 索引签名 */
+  [key: string]: PlatformPublishInfo | undefined
+}
+
+/**
+ * 平台ID映射表结构
+ */
+export interface PlatformIds {
+  /** Schema版本 */
+  version: number
+  /** 文章ID到平台信息的映射 */
+  mappings: Record<string, PlatformIdMapping>
+  /** 最后更新时间 */
+  lastUpdated: string
+}
+
+/**
+ * 推介文章链接
+ */
+export interface RelatedPostLinks {
+  /** 上一篇文章 */
+  prev?: { title: string; url: string }
+  /** 下一篇文章 */
+  next?: { title: string; url: string }
+  /** 相关文章列表 */
+  related: Array<{ title: string; url: string }>
+}

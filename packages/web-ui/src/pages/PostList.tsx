@@ -21,7 +21,7 @@ export default function PostList() {
 
   const fetchPosts = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/posts')
+      const response = await fetch('/api/posts')
       if (!response.ok) {
         throw new Error('获取文章列表失败')
       }
