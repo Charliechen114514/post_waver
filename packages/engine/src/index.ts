@@ -8,3 +8,6 @@ export * from './clipboard.js'
 
 // Export scheduler functionality
 export * from './scheduler.js'
+
+// Export API functionality
+export * from './api.js'
