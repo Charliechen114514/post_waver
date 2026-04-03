@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { InjectionTemplateEditor } from '../components/InjectionTemplateEditor'
 import { showToast } from '../components/Toast'
 import './InjectionTemplateManager.css'
@@ -21,6 +22,7 @@ interface TemplateInput {
 }
 
 export default function InjectionTemplateManager() {
+  const navigate = useNavigate()
   const [templates, setTemplates] = useState<InjectionTemplate[]>([])
   const [loading, setLoading] = useState(true)
   const [showEditor, setShowEditor] = useState(false)
@@ -174,7 +176,14 @@ export default function InjectionTemplateManager() {
   return (
     <div className="injection-template-manager">
       <div className="manager-header">
-        <div>
+        <button
+          onClick={() => navigate(-1)}
+          className="btn btn-secondary back-button"
+          title="返回上一页"
+        >
+          ← 返回
+        </button>
+        <div className="header-title">
           <h1>📝 注入模板管理</h1>
           <p className="subtitle">管理文章标题后的注入内容模板</p>
         </div>
