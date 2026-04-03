@@ -3,11 +3,6 @@ name: Deploy Converter to GitHub Pages
 on:
   push:
     branches: [main]
-    paths:
-      - 'packages/converter-web/**'
-      - 'packages/transformer/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
   workflow_dispatch:
 
 permissions:
