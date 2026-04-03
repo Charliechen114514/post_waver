@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { SplitPreview } from '../components/SplitPreview'
+import { ArticleListSidebar } from '../components/ArticleListSidebar'
 import { showToast } from '../components/Toast'
 import './PublishWorkspace.css'
 
@@ -35,6 +36,15 @@ export default function PublishWorkspace() {
   const [showBatchModal, setShowBatchModal] = useState(false)
   const [themes, setThemes] = useState<Theme[]>([])
   const [selectedTheme, setSelectedTheme] = useState<string>('orangeheart')
+  const [showSidebar, setShowSidebar] = useState<boolean>(true)
+
+  // 从 localStorage 读取左侧栏显示状态
+  useEffect(() => {
+    const saved = localStorage.getItem('publishSidebarVisible')
+    if (saved !== null) {
+      setShowSidebar(JSON.parse(saved))
+    }
+  }, [])
 
   // 扫描文章
   const handleScan = async (showAlert = true) => {
@@ -204,11 +214,36 @@ export default function PublishWorkspace() {
     }
   }
 
+  // 切换左侧栏显示
+  const toggleSidebar = () => {
+    const newState = !showSidebar
+    setShowSidebar(newState)
+    localStorage.setItem('publishSidebarVisible', JSON.stringify(newState))
+  }
+
+  // 切换文章勾选状态
+  const togglePostId = (postId: string) => {
+    if (selectedPostIds.includes(postId)) {
+      setSelectedPostIds(selectedPostIds.filter(id => id !== postId))
+    } else {
+      setSelectedPostIds([...selectedPostIds, postId])
+    }
+  }
+
   return (
     <div className="publish-workspace">
       {/* 顶部操作栏 */}
       <div className="top-bar">
-        <h1>📝 发布工作台</h1>
+        <div className="top-bar-left">
+          <button
+            onClick={toggleSidebar}
+            className="btn-icon"
+            title={showSidebar ? '隐藏文章列表' : '显示文章列表'}
+          >
+            {showSidebar ? '◀' : '▶'}
+          </button>
+          <h1>📝 发布工作台</h1>
+        </div>
         <div className="actions">
           <button
             onClick={() => handleScan(true)}
@@ -227,111 +262,136 @@ export default function PublishWorkspace() {
         </div>
       </div>
 
-      {/* 选择器区域 */}
-      <div className="selection-area">
-        <div className="selector-group">
-          <label>选择文章：</label>
-          {posts.length > 0 ? (
-            <select
-              value={currentPreviewId}
-              onChange={(e) => handlePreviewChange(e.target.value)}
-              className="select"
-            >
-              {posts.map(post => (
-                <option key={post.id} value={post.id}>
-                  {post.title} ({post.id})
-                </option>
-              ))}
-            </select>
-          ) : (
-            <select
-              value=""
-              disabled
-              className="select disabled"
-            >
-              <option>暂无文章，请先扫描</option>
-            </select>
-          )}
-        </div>
-
-        <div className="selector-group">
-          <label>目标平台：</label>
-          <div className="platform-selector">
-            {[
-              { value: 'juejin', label: '掘金', icon: '⛏️' },
-              { value: 'wechat', label: '微信公众号', icon: '💬' },
-              { value: 'html', label: 'HTML', icon: '🌐' }
-            ].map(platform => (
-              <button
-                key={platform.value}
-                className={`platform-btn ${selectedPlatform === platform.value ? 'active' : ''}`}
-                onClick={() => setSelectedPlatform(platform.value as Platform)}
-              >
-                {platform.icon} {platform.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 微信主题选择器 */}
-        {selectedPlatform === 'wechat' && (
-          <div className="selector-group">
-            <label>微信主题：</label>
-            <select
-              value={selectedTheme}
-              onChange={(e) => handleSetTheme(e.target.value)}
-              className="select"
-            >
-              {themes.map(theme => (
-                <option key={theme.name} value={theme.name}>
-                  {theme.displayName} - {theme.description}
-                </option>
-              ))}
-            </select>
-          </div>
+      {/* 工作区容器 */}
+      <div className="workspace-container">
+        {/* 左侧文章列表栏 */}
+        {showSidebar && (
+          <ArticleListSidebar
+            jobs={posts.map(post => ({
+              jobId: post.id,
+              postId: post.id,
+              status: 'pending' as const,
+              currentStep: 0,
+              totalSteps: 1,
+              stepName: '准备发布',
+              progress: 0,
+              startedAt: post.date
+            }))}
+            selectedPostIds={selectedPostIds}
+            onToggle={togglePostId}
+            onSelectPost={(postId) => setCurrentPreviewId(postId)}
+          />
         )}
 
-        <div className="checkbox-group">
-          <label>
-            <input
-              type="checkbox"
-              checked={selectedPostIds.includes(currentPreviewId)}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  setSelectedPostIds([...selectedPostIds, currentPreviewId])
-                } else {
-                  setSelectedPostIds(selectedPostIds.filter(id => id !== currentPreviewId))
-                }
-              }}
-              disabled={!currentPreviewId}
-            />
-            加入发布列表
-          </label>
-        </div>
-      </div>
+        {/* 右侧主内容区 */}
+        <div className="main-content">
+          {/* 选择器区域 */}
+          <div className="selection-area">
+            <div className="selector-group">
+              <label>选择文章：</label>
+              {posts.length > 0 ? (
+                <select
+                  value={currentPreviewId}
+                  onChange={(e) => handlePreviewChange(e.target.value)}
+                  className="select"
+                >
+                  {posts.map(post => (
+                    <option key={post.id} value={post.id}>
+                      {post.title} ({post.id})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <select
+                  value=""
+                  disabled
+                  className="select disabled"
+                >
+                  <option>暂无文章，请先扫描</option>
+                </select>
+              )}
+            </div>
 
-      {/* 预览区域 */}
-      <div className="preview-area">
-        {currentPost ? (
-          <div className="preview-content">
-            {htmlContent ? (
-              <SplitPreview
-                postId={currentPreviewId}
-                title={currentPost.title}
-                platform={selectedPlatform}
-                content={previewContent}
-                htmlContent={htmlContent}
-                externalTheme={selectedPlatform === 'wechat' ? selectedTheme : undefined}
-              />
+            <div className="selector-group">
+              <label>目标平台：</label>
+              <div className="platform-selector">
+                {[
+                  { value: 'juejin', label: '掘金', icon: '⛏️' },
+                  { value: 'wechat', label: '微信公众号', icon: '💬' },
+                  { value: 'html', label: 'HTML', icon: '🌐' }
+                ].map(platform => (
+                  <button
+                    key={platform.value}
+                    className={`platform-btn ${selectedPlatform === platform.value ? 'active' : ''}`}
+                    onClick={() => setSelectedPlatform(platform.value as Platform)}
+                  >
+                    {platform.icon} {platform.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 微信主题选择器 */}
+            {selectedPlatform === 'wechat' && (
+              <div className="selector-group">
+                <label>微信主题：</label>
+                <select
+                  value={selectedTheme}
+                  onChange={(e) => handleSetTheme(e.target.value)}
+                  className="select"
+                >
+                  {themes.map(theme => (
+                    <option key={theme.name} value={theme.name}>
+                      {theme.displayName} - {theme.description}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="checkbox-group">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={selectedPostIds.includes(currentPreviewId)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedPostIds([...selectedPostIds, currentPreviewId])
+                    } else {
+                      setSelectedPostIds(selectedPostIds.filter(id => id !== currentPreviewId))
+                    }
+                  }}
+                  disabled={!currentPreviewId}
+                />
+                加入发布列表
+              </label>
+            </div>
+          </div>
+
+          {/* 预览区域 */}
+          <div className="preview-area">
+            {currentPost ? (
+              <div className="preview-content">
+                {htmlContent ? (
+                  <SplitPreview
+                    postId={currentPreviewId}
+                    title={currentPost.title}
+                    platform={selectedPlatform}
+                    content={previewContent}
+                    htmlContent={htmlContent}
+                    externalTheme={selectedPlatform === 'wechat' ? selectedTheme : undefined}
+                  />
+                ) : (
+                  <div className="loading">加载中...</div>
+                )}
+              </div>
             ) : (
-              <div className="loading">加载中...</div>
+              <div className="empty-state">
+                <p>请选择一篇文章进行预览</p>
+              </div>
             )}
           </div>
-        ) : (
-          <div className="empty-state">
-            <p>请选择一篇文章进行预览</p>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* 批量发布模态框 */}

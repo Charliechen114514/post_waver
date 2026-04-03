@@ -279,11 +279,32 @@ export async function createAPIServer(options: {
         return c.text('无效的资源路径：路径为空', 400)
       }
 
-      // 映射到 content/posts/assets/ 目录
-      const fullPath = join(process.cwd(), 'content/posts/assets', relativePath)
+      // 尝试多个可能的目录位置
+      const baseDir = process.cwd()
+      const possiblePaths = [
+        join(baseDir, 'content/posts/assets', relativePath),  // posts 目录
+        join(baseDir, 'content/done/assets', relativePath),    // done 目录
+        join(baseDir, 'content/assets/images', relativePath),  // assets/images 目录
+        join(baseDir, 'content/assets', relativePath)          // assets 目录
+      ]
 
-      // 读取文件
-      const fileContent = await readFile(fullPath)
+      let fileContent: Buffer | null = null
+
+      // 依次尝试每个路径
+      for (const fullPath of possiblePaths) {
+        try {
+          fileContent = await readFile(fullPath)
+          break
+        } catch (err) {
+          // 继续尝试下一个路径
+          continue
+        }
+      }
+
+      if (!fileContent) {
+        console.error('❌ 静态文件未找到，已尝试以下路径:', possiblePaths)
+        return c.text('文件不存在', 404)
+      }
 
       // 根据文件扩展名设置 Content-Type
       const ext = relativePath.split('.').pop()?.toLowerCase()
@@ -299,7 +320,8 @@ export async function createAPIServer(options: {
 
       const contentType = contentTypes[ext || ''] || 'application/octet-stream'
 
-      return c.body(fileContent, 200, {
+      // 将 Buffer 转换为 Uint8Array 以兼容 Hono 的类型系统
+      return c.body(new Uint8Array(fileContent), 200, {
         'Content-Type': contentType,
         'Cache-Control': 'public, max-age=3600'
       })

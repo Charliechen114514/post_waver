@@ -1,0 +1,82 @@
+.article-list-sidebar {
+  width: 280px;
+  min-width: 280px;
+  background: white;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #111827;
+}
+
+.sidebar-header .count {
+  font-size: 12px;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.article-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.article-item:hover {
+  background: #f9fafb;
+}
+
+.article-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.article-id {
+  flex: 1;
+  font-size: 14px;
+  color: #374151;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.article-status {
+  font-size: 14px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .article-list-sidebar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    z-index: 10;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  }
+}

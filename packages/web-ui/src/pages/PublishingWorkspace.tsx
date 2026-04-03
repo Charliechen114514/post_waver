@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { GridLayout } from '../components/GridLayout'
 import './PublishingWorkspace.css'
@@ -21,6 +21,7 @@ export default function PublishingWorkspace() {
   const navigate = useNavigate()
   const [jobs, setJobs] = useState<JobStatus[]>([])
   const [activeTab, setActiveTab] = useState<string>('')
+  const hasInitializedTab = useRef(false)
 
   // 轮询批量任务状态
   useEffect(() => {
@@ -34,9 +35,10 @@ export default function PublishingWorkspace() {
         if (data.success) {
           setJobs(data.data.jobs)
 
-          // 设置第一个为默认激活的 Tab
-          if (jobs.length === 0 && data.data.jobs.length > 0) {
+          // 只在第一次设置默认激活的 Tab
+          if (!hasInitializedTab.current && data.data.jobs.length > 0) {
             setActiveTab(data.data.jobs[0].postId)
+            hasInitializedTab.current = true
           }
         }
       } catch (error) {
