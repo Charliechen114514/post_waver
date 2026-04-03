@@ -1,7 +1,6 @@
 .publish-workspace {
   display: flex;
   flex-direction: column;
-  height: 100vh;
   background: #f9fafb;
 }
 
@@ -64,6 +63,18 @@
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+.select.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #f3f4f6;
+}
+
+.select.disabled:focus {
+  outline: none;
+  border-color: #d1d5db;
+  box-shadow: none;
+}
+
 /* 平台选择器 */
 .platform-selector {
   display: flex;
@@ -119,8 +130,6 @@
 
 /* 预览区域 */
 .preview-area {
-  flex: 1;
-  overflow: auto;
   padding: 24px;
 }
 
@@ -148,12 +157,20 @@
   font-weight: 500;
 }
 
-.preview-content {
+.publish-workspace .preview-content {
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  padding: 24px;
-  min-height: 400px;
+  padding: 0;
+  max-height: none;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 250px);
+}
+
+.preview-content .markdown-body {
+  margin-bottom: 16px;
 }
 
 .preview-content pre {
@@ -327,9 +344,10 @@
 
 .post-item {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   gap: 12px;
+  padding: 12px;
 }
 
 .post-title {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { CopyButton } from './CopyButton'
+import { showToast } from './Toast'
 import './SplitPreview.css'
 
 interface SplitPreviewProps {
@@ -8,20 +9,39 @@ interface SplitPreviewProps {
   platform: string
   content: string
   htmlContent?: string
+  externalTheme?: string // External theme from parent component
 }
 
-export function SplitPreview({ postId, title, platform, content, htmlContent }: SplitPreviewProps) {
-  const [theme, setTheme] = useState<string>('orangeheart')
+export function SplitPreview({ postId, title, platform, content, htmlContent, externalTheme }: SplitPreviewProps) {
+  const [theme, setTheme] = useState<string>(externalTheme || 'orangeheart')
   const [themes, setThemes] = useState<any[]>([])
   const [currentHtml, setCurrentHtml] = useState<string>(htmlContent || '')
   const [loading, setLoading] = useState(false)
 
-  // 加载主题列表
+  // 是否为微信平台
+  const isWeChat = platform === 'wechat'
+
+  // 加载主题列表（仅微信平台）
   useEffect(() => {
-    if (platform === 'wechat') {
+    if (isWeChat) {
       loadThemes()
     }
-  }, [platform])
+  }, [isWeChat])
+
+  // 监听 htmlContent prop 变化
+  useEffect(() => {
+    if (htmlContent) {
+      setCurrentHtml(htmlContent)
+    }
+  }, [htmlContent])
+
+  // 监听外部主题变化（仅微信平台）
+  useEffect(() => {
+    if (isWeChat && externalTheme) {
+      setTheme(externalTheme)
+      // 注意：不在这里调用 applyTheme，因为 PublishWorkspace 已经重新获取了预览内容
+    }
+  }, [externalTheme, isWeChat])
 
   // 加载主题
   const loadThemes = async () => {
@@ -41,9 +61,9 @@ export function SplitPreview({ postId, title, platform, content, htmlContent }: 
     }
   }
 
-  // 应用主题
+  // 应用主题（仅微信平台）
   const applyTheme = async (themeName: string) => {
-    if (platform !== 'wechat') return
+    if (!isWeChat) return
 
     setLoading(true)
     try {
@@ -90,7 +110,7 @@ export function SplitPreview({ postId, title, platform, content, htmlContent }: 
           <span className="platform-badge">{platform}</span>
         </div>
         <div className="header-right">
-          {platform === 'wechat' && themes.length > 0 && (
+          {isWeChat && themes.length > 0 && (
             <div className="theme-selector">
               <label>🎨 主题:</label>
               <select
@@ -149,13 +169,9 @@ export function SplitPreview({ postId, title, platform, content, htmlContent }: 
             htmlContent={currentHtml || null}
             platform={platform}
             onSuccess={() => {
-              const toast = document.createElement('div')
-              toast.className = 'toast success'
-              toast.textContent = '✅ 已复制到剪贴板！'
-              document.body.appendChild(toast)
-              setTimeout(() => toast.remove(), 2000)
+              showToast('已复制到剪贴板！', 'success')
             }}
-            onError={(err) => alert(`❌ 复制失败: ${err.message}`)}
+            onError={(err) => showToast(`复制失败: ${err.message}`, 'error')}
             className="btn-lg"
           />
         </div>

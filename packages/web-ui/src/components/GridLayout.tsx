@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { CopyButton } from './CopyButton'
+import { showToast } from './Toast'
 import './GridLayout.css'
 
 interface JobStatus {
@@ -34,17 +35,45 @@ export function GridLayout({ postId, job }: GridLayoutProps) {
   const [contents, setContents] = useState<Record<string, string>>({})
   const [htmlContents, setHtmlContents] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState<Record<string, boolean>>({})
+  const [defaultThemes, setDefaultThemes] = useState<Record<string, string>>({})
+
+  // 加载微信主题
+  useEffect(() => {
+    const loadWeChatThemes = async () => {
+      try {
+        const response = await fetch('/api/themes/wechat')
+        const data = await response.json()
+        if (data.success) {
+          setDefaultThemes(prev => ({ ...prev, wechat: data.defaultTheme }))
+        }
+      } catch (error) {
+        console.error('加载微信主题失败:', error)
+      }
+    }
+    loadWeChatThemes()
+  }, [])
 
   // 当任务完成时，获取各平台内容
   useEffect(() => {
     if (job.status === 'completed') {
+      // 对于微信平台，等待主题加载完成
+      if (!defaultThemes.wechat) {
+        return
+      }
+
       platforms.forEach(async (platform) => {
         try {
           setLoading(prev => ({ ...prev, [platform.platform]: true }))
+
+          const requestBody: any = { platform: platform.platform }
+          if (platform.platform === 'wechat') {
+            requestBody.theme = defaultThemes.wechat
+          }
+
           const response = await fetch(`/api/posts/${postId}/preview`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ platform: platform.platform })
+            body: JSON.stringify(requestBody)
           })
 
           const data = await response.json()
@@ -61,7 +90,7 @@ export function GridLayout({ postId, job }: GridLayoutProps) {
         }
       })
     }
-  }, [job.status, postId])
+  }, [job.status, postId, defaultThemes])
 
   return (
     <div className="grid-layout-container">
@@ -118,10 +147,11 @@ export function GridLayout({ postId, job }: GridLayoutProps) {
                       {htmlContents[platform.platform] ? (
                         // 对于有 HTML 的平台（微信公众号），显示富文本预览
                         <div
-                          className="html-preview"
+                          className={`html-preview ${platform.platform === 'wechat' ? 'markdown-body' : ''}`}
                           dangerouslySetInnerHTML={{
-                            __html: htmlContents[platform.platform].substring(0, 500) + '...'
+                            __html: htmlContents[platform.platform]
                           }}
+                          style={{ maxHeight: '300px', overflow: 'auto' }}
                         />
                       ) : (
                         // 对于其他平台，显示纯文本预览
@@ -133,8 +163,8 @@ export function GridLayout({ postId, job }: GridLayoutProps) {
                         content={contents[platform.platform]}
                         htmlContent={htmlContents[platform.platform] || null}
                         platform={platform.platform as any}
-                        onSuccess={() => alert(`✅ ${platform.name} 内容已复制到剪贴板！`)}
-                        onError={(err) => alert(`❌ 复制失败: ${err.message}`)}
+                        onSuccess={() => showToast(`${platform.name} 内容已复制到剪贴板！`, 'success')}
+                        onError={(err) => showToast(`复制失败: ${err.message}`, 'error')}
                       />
                       <button
                         className="btn btn-secondary"
@@ -143,19 +173,26 @@ export function GridLayout({ postId, job }: GridLayoutProps) {
                           if (newWindow) {
                             if (htmlContents[platform.platform]) {
                               // 对于有 HTML 的平台，显示完整 HTML
+                              // 注意：微信主题 CSS 需要包裹在 .markdown-body 类中才能生效
+                              const wrappedContent = platform.platform === 'wechat'
+                                ? `<div class="markdown-body">${htmlContents[platform.platform]}</div>`
+                                : htmlContents[platform.platform]
+
                               newWindow.document.write(`
                                 <html>
                                   <head>
                                     <title>${platform.name} 预览</title>
+                                    <meta charset="UTF-8">
                                     <style>
                                       body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; padding: 20px; max-width: 800px; margin: 0 auto; }
                                       pre { background: #f4f4f4; padding: 1em; overflow-x: auto; }
                                       code { background: #f4f4f4; padding: 0.2em 0.4em; border-radius: 3px; }
                                     </style>
                                   </head>
-                                  <body>${htmlContents[platform.platform]}</body>
+                                  <body>${wrappedContent}</body>
                                 </html>
                               `)
+                              newWindow.document.close()
                             } else {
                               // 对于纯文本平台
                               newWindow.document.write(`

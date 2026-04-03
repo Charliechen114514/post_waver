@@ -134,12 +134,17 @@ export class ImageUploadManager {
   ): Promise<UploadManagerResult> {
     const { maxRetries = 2, outputDir, fallbackToList = true } = options
 
+    console.log(`  🔧 开始初始化微信客户端...`)
+
     // 初始化微信客户端
     if (!this.wechatClient) {
+      console.log(`  📱 加载微信配置...`)
       const wechatConfig = await this.configManager.getWechatConfig()
       if (!wechatConfig) {
+        console.error(`  ❌ 微信配置不存在，请检查配置文件`)
         throw new Error('微信配置不存在')
       }
+      console.log(`  ✅ 微信配置加载成功 (appId: ${wechatConfig.appId})`)
 
       this.wechatClient = new WechatClient({
         appId: wechatConfig.appId,
@@ -147,14 +152,21 @@ export class ImageUploadManager {
         apiBaseUrl: 'https://api.weixin.qq.com/cgi-bin',
         tokenCachePath: join(process.cwd(), '.post-waver/wechat-token.json')
       })
+      console.log(`  ✅ 微信客户端初始化完成`)
     }
 
     const uploaded: ImageUploadResult[] = []
     let success = 0
     let failed = 0
 
-    for (const img of images) {
+    console.log(`  📤 开始上传 ${images.length} 张图片...`)
+
+    for (let i = 0; i < images.length; i++) {
+      const img = images[i]
+      console.log(`\n  [${i + 1}/${images.length}] 处理图片: ${img.originalPath}`)
+
       if (!img.absolutePath) {
+        console.error(`    ❌ 文件路径不存在`)
         failed++
         uploaded.push({
           originalPath: img.originalPath,
@@ -165,14 +177,22 @@ export class ImageUploadManager {
         continue
       }
 
+      console.log(`    📁 本地路径: ${img.absolutePath}`)
+
       // 带重试的上传
       let lastError = ''
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        console.log(`    🔄 尝试上传 (第 ${attempt}/${maxRetries} 次)...`)
+
         try {
           const result = await this.wechatClient.uploadImage(img.absolutePath)
 
           if (result.success) {
             success++
+            console.log(`    ✅ 上传成功!`)
+            console.log(`       Media ID: ${result.mediaId}`)
+            console.log(`       URL: ${result.url}`)
+
             uploaded.push({
               originalPath: img.originalPath,
               platform: 'wechat',
@@ -184,13 +204,16 @@ export class ImageUploadManager {
             break
           } else {
             lastError = result.error || '未知错误'
+            console.log(`    ⚠️  上传失败: ${lastError}`)
           }
         } catch (error) {
           lastError = error instanceof Error ? error.message : String(error)
+          console.error(`    ❌ 上传异常: ${lastError}`)
         }
 
         // 等待后重试
         if (attempt < maxRetries) {
+          console.log(`    ⏳ 等待 2 秒后重试...`)
           await new Promise(resolve => setTimeout(resolve, 2000))
         }
       }
@@ -198,6 +221,9 @@ export class ImageUploadManager {
       // 所有重试都失败
       if (lastError) {
         failed++
+        console.error(`    ❌ 图片上传失败（已达最大重试次数）: ${img.originalPath}`)
+        console.error(`       错误原因: ${lastError}`)
+
         uploaded.push({
           originalPath: img.originalPath,
           platform: 'wechat',
@@ -207,7 +233,10 @@ export class ImageUploadManager {
       }
     }
 
-    console.log(`  ✅ 成功: ${success}, ❌ 失败: ${failed}`)
+    console.log(`\n  📊 上传统计:`)
+    console.log(`     ✅ 成功: ${success}`)
+    console.log(`     ❌ 失败: ${failed}`)
+    console.log(`     📝 成功率: ${success > 0 ? ((success / images.length) * 100).toFixed(1) : 0}%`)
 
     // 如果有失败的，生成图片列表
     let listFile: string | undefined

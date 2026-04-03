@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { CopyButton } from '../components/CopyButton'
 import { PlatformIdManager } from '../components/PlatformIdManager'
+import { showToast } from '../components/Toast'
 
 interface Frontmatter {
   title: string
@@ -75,7 +76,7 @@ export default function PostDetail() {
       const data = await response.json()
       setTransformedContent(data.content)
     } catch (err) {
-      alert(err instanceof Error ? err.message : '转换失败')
+      showToast(err instanceof Error ? err.message : '转换失败', 'error')
     } finally {
       setTransforming(false)
     }
@@ -160,8 +161,8 @@ export default function PostDetail() {
               <CopyButton
                 content={transformedContent}
                 platform={selectedPlatform}
-                onSuccess={() => alert('✅ 已复制到剪贴板！')}
-                onError={(err) => alert(`❌ 复制失败: ${err.message}`)}
+                onSuccess={() => showToast('已复制到剪贴板！', 'success')}
+                onError={(err) => showToast(`复制失败: ${err.message}`, 'error')}
               />
             )}
           </div>

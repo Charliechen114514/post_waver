@@ -7,7 +7,7 @@ import { FileMover } from '../workflow/file-mover.js'
 import { ImageUploadManager } from '../image/upload-manager.js'
 import { replaceImageUrls } from '../image/image-url-replacer.js'
 import { transformForJuejin, transformForWechat, markdownToHTML } from '@content-hub/transformer'
-import { readFileSync, existsSync } from 'fs'
+import { readFileSync, existsSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import open from 'open'
 
@@ -28,7 +28,8 @@ export class FullPublishPipeline {
   private imageManager: ImageUploadManager
   private steps: PublishStep[]
   private cachedPostContent: { title: string; content: string } | null = null
-  private processedContent: string | null = null  // 新增：存储处理后的内容
+  private originalContent: string | null = null  // 存储原始内容（用于掘金/HTML）
+  private wechatReplacedContent: string | null = null  // 存储微信替换后的内容
 
   constructor() {
     this.config = new ConfigManager()
@@ -186,6 +187,9 @@ export class FullPublishPipeline {
 
         const { content, postDir } = await this.parsePost(postId)
 
+        // 保存原始内容（用于掘金/HTML平台）
+        this.originalContent = content
+
         // 准备输出目录
         const outputDir = join(process.cwd(), 'output', 'temp')
 
@@ -218,7 +222,7 @@ export class FullPublishPipeline {
           }
         }
 
-        // 替换微信图片链接（仅在上传图片后）
+        // 替换微信图片链接（不写回文件，只在内存中保存）
         if (results.length > 0) {
           const wechatResult = results.find(r => r.platform === 'wechat')
           if (wechatResult && wechatResult.uploaded && wechatResult.uploaded.length > 0) {
@@ -226,8 +230,9 @@ export class FullPublishPipeline {
             if (uploadedImages.length > 0) {
               console.log(`  🔄 替换微信图片链接 (${uploadedImages.length}张)`)
               const replacedContent = replaceImageUrls(content, wechatResult.uploaded)
-              this.processedContent = replacedContent
-              console.log(`     ✅ 链接替换完成`)
+              // 保存到内存，供生成发布页面时使用
+              this.wechatReplacedContent = replacedContent
+              console.log(`     ✅ 微信链接替换完成（内存中）`)
             }
           }
         }
@@ -245,33 +250,38 @@ export class FullPublishPipeline {
           return null
         }
 
-        // 修改：使用处理后的内容（已替换图片链接）
-        const content = this.processedContent || (await this.parsePost(postId)).content
+        // 为不同平台使用不同的内容：
+        // - 微信：使用替换后的内容（微信CDN）
+        // - 掘金/HTML：使用原始内容（保持本地路径）
+        const originalContent = this.originalContent || (await this.parsePost(postId)).content
+        const wechatContent = this.wechatReplacedContent || originalContent
 
-        // 使用 Transformer 实际转换内容
         console.log('  🔄 转换平台产物...')
+        console.log(`     - 微信: 使用微信CDN链接`)
+        console.log(`     - 掘金: 使用原始图片路径`)
+        console.log(`     - HTML: 使用原始图片路径`)
 
         const platforms = [
           {
             platform: 'juejin',
             name: '掘金',
-            content: await transformForJuejin(content)
+            content: await transformForJuejin(originalContent)  // 使用原始内容
           },
           {
             platform: 'wechat',
             name: '微信公众号',
-            content: await transformForWechat(content)
+            content: await transformForWechat(wechatContent)  // 使用替换后的内容
           },
           {
             platform: 'html',
             name: 'HTML',
-            content: await markdownToHTML(content)
+            content: await markdownToHTML(originalContent)  // 使用原始内容
           }
         ]
 
         result.outputs.platforms = platforms
 
-        const pagePath = await generatePublishPage(postId, result.title, content, platforms, {
+        const pagePath = await generatePublishPage(postId, result.title, originalContent, platforms, {
           openBrowser: false
         })
 

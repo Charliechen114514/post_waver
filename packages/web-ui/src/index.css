@@ -40,7 +40,6 @@ body {
 }
 
 .app-main {
-  flex: 1;
   padding: 32px;
   max-width: 1200px;
   width: 100%;

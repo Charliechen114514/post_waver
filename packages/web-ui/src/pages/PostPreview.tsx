@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { SplitPreview } from '../components/SplitPreview'
+import { showToast } from '../components/Toast'
 import './PostPreview.css'
 
 export default function PostPreview() {
@@ -35,11 +36,11 @@ export default function PostPreview() {
         setContent(data.content)
         setHtmlContent(data.html || '')
       } else {
-        alert(`❌ 加载失败: ${data.error}`)
+        showToast(`加载失败: ${data.error}`, 'error')
       }
     } catch (error) {
       console.error('加载预览失败:', error)
-      alert('❌ 加载预览失败')
+      showToast('加载预览失败', 'error')
     } finally {
       setLoading(false)
     }

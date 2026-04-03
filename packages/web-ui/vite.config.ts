@@ -29,6 +29,21 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true
+      },
+      // 代理 KaTeX CSS 文件
+      '/katex-base.css': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
+      },
+      // 代理静态资源（图片等）到后端服务器
+      '/post_waver/assets': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/post_waver\/assets/, '/assets')
+      },
+      '/assets': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
       }
     }
   }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { CopyButton } from '../components/CopyButton'
+import { SplitPreview } from '../components/SplitPreview'
+import { showToast } from '../components/Toast'
 import './PublishWorkspace.css'
 
 interface Post {
@@ -29,6 +30,7 @@ export default function PublishWorkspace() {
   const [currentPreviewId, setCurrentPreviewId] = useState<string>('')
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('juejin')
   const [previewContent, setPreviewContent] = useState<string>('')
+  const [htmlContent, setHtmlContent] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [showBatchModal, setShowBatchModal] = useState(false)
   const [themes, setThemes] = useState<Theme[]>([])
@@ -50,17 +52,17 @@ export default function PublishWorkspace() {
           setCurrentPreviewId(data.posts[0].id)
         }
         if (showAlert) {
-          alert(`✅ 扫描完成！找到 ${data.total} 篇文章`)
+          showToast(`✅ 扫描完成！找到 ${data.total} 篇文章`, 'success')
         }
       } else {
         if (showAlert) {
-          alert(`❌ 扫描失败: ${data.error}`)
+          showToast(`❌ 扫描失败: ${data.error}`, 'error')
         }
       }
     } catch (error) {
       console.error('扫描失败:', error)
       if (showAlert) {
-        alert('❌ 扫描失败，请检查 API 服务器是否运行')
+        showToast('❌ 扫描失败，请检查 API 服务器是否运行', 'error')
       }
     } finally {
       setLoading(false)
@@ -99,7 +101,7 @@ export default function PublishWorkspace() {
     }
   }
 
-  // 设置主题
+  // 设置主题（静默切换，不弹提示）
   const handleSetTheme = async (themeName: string) => {
     try {
       const response = await fetch(`/api/themes/wechat/${themeName}`, {
@@ -108,11 +110,26 @@ export default function PublishWorkspace() {
       const data = await response.json()
       if (data.success) {
         setSelectedTheme(themeName)
-        alert(`✅ ${data.message}`)
+        // 重新获取预览内容以应用新主题
+        if (currentPreviewId) {
+          const previewResponse = await fetch(`/api/posts/${currentPreviewId}/preview`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              platform: selectedPlatform,
+              theme: themeName
+            })
+          })
+          const previewData = await previewResponse.json()
+          if (previewData.success) {
+            setPreviewContent(previewData.content)
+            setHtmlContent(previewData.html || '')
+          }
+        }
       }
     } catch (error) {
       console.error('设置主题失败:', error)
-      alert('❌ 设置主题失败')
+      // 失败时也不弹出提示，避免打断用户操作
     }
   }
 
@@ -134,6 +151,7 @@ export default function PublishWorkspace() {
         const data = await response.json()
         if (data.success) {
           setPreviewContent(data.content)
+          setHtmlContent(data.html || '')
         }
       } catch (error) {
         console.error('预览失败:', error)
@@ -154,7 +172,7 @@ export default function PublishWorkspace() {
   // 批量发布
   const handleBatchPublish = () => {
     if (selectedPostIds.length === 0) {
-      alert('请先选择要发布的文章')
+      showToast('请先选择要发布的文章', 'warning')
       return
     }
     setShowBatchModal(true)
@@ -178,11 +196,11 @@ export default function PublishWorkspace() {
         // 跳转到发布界面
         navigate(`/publishing/${data.batchId}`)
       } else {
-        alert(`❌ 发布失败: ${data.error}`)
+        showToast(`❌ 发布失败: ${data.error}`, 'error')
       }
     } catch (error) {
       console.error('批量发布失败:', error)
-      alert('❌ 批量发布失败，请检查 API 服务器是否运行')
+      showToast('❌ 批量发布失败，请检查 API 服务器是否运行', 'error')
     }
   }
 
@@ -213,18 +231,27 @@ export default function PublishWorkspace() {
       <div className="selection-area">
         <div className="selector-group">
           <label>选择文章：</label>
-          <select
-            value={currentPreviewId}
-            onChange={(e) => handlePreviewChange(e.target.value)}
-            className="select"
-          >
-            <option value="">-- 请选择 --</option>
-            {posts.map(post => (
-              <option key={post.id} value={post.id}>
-                {post.title} ({post.id})
-              </option>
-            ))}
-          </select>
+          {posts.length > 0 ? (
+            <select
+              value={currentPreviewId}
+              onChange={(e) => handlePreviewChange(e.target.value)}
+              className="select"
+            >
+              {posts.map(post => (
+                <option key={post.id} value={post.id}>
+                  {post.title} ({post.id})
+                </option>
+              ))}
+            </select>
+          ) : (
+            <select
+              value=""
+              disabled
+              className="select disabled"
+            >
+              <option>暂无文章，请先扫描</option>
+            </select>
+          )}
         </div>
 
         <div className="selector-group">
@@ -286,39 +313,20 @@ export default function PublishWorkspace() {
       {/* 预览区域 */}
       <div className="preview-area">
         {currentPost ? (
-          <>
-            <div className="preview-header">
-              <h2>{currentPost.title}</h2>
-              <span className="badge">{selectedPlatform}</span>
-            </div>
-            <div className="preview-content">
-              {previewContent ? (
-                <>
-                  <pre>{previewContent.substring(0, 500)}...</pre>
-                  <div className="preview-actions">
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => {
-                        // 导航到预览页面
-                        navigate(`/preview/${currentPreviewId}`)
-                      }}
-                    >
-                      👁️ 打开完整预览
-                    </button>
-                    <CopyButton
-                      content={previewContent}
-                      htmlContent={selectedPlatform === 'wechat' || selectedPlatform === 'html' ? previewContent : null}
-                      platform={selectedPlatform}
-                      onSuccess={() => alert(`✅ ${selectedPlatform} 内容已复制到剪贴板！`)}
-                      onError={(err) => alert(`❌ 复制失败: ${err.message}`)}
-                    />
-                  </div>
-                </>
-              ) : (
-                <div className="loading">加载中...</div>
-              )}
-            </div>
-          </>
+          <div className="preview-content">
+            {htmlContent ? (
+              <SplitPreview
+                postId={currentPreviewId}
+                title={currentPost.title}
+                platform={selectedPlatform}
+                content={previewContent}
+                htmlContent={htmlContent}
+                externalTheme={selectedPlatform === 'wechat' ? selectedTheme : undefined}
+              />
+            ) : (
+              <div className="loading">加载中...</div>
+            )}
+          </div>
         ) : (
           <div className="empty-state">
             <p>请选择一篇文章进行预览</p>
@@ -345,15 +353,6 @@ export default function PublishWorkspace() {
                   return (
                     <li key={id} className="post-item">
                       <span className="post-title">{post?.title || id}</span>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => {
-                          // 导航到预览页面
-                          navigate(`/preview/${id}`)
-                        }}
-                      >
-                        👁️ 预览
-                      </button>
                     </li>
                   )
                 })}
@@ -386,7 +385,7 @@ export default function PublishWorkspace() {
                   const contentChecked = (document.getElementById('confirm-content') as HTMLInputElement)?.checked
 
                   if (!previewChecked || !contentChecked) {
-                    alert('请确认已完成预览和内容检查')
+                    showToast('请确认已完成预览和内容检查', 'warning')
                     return
                   }
 

@@ -26,7 +26,7 @@ export class WorkflowOrchestrator {
       fast?: boolean
       onProgress?: (step: number, total: number, stepName: string) => void
     } = {}
-  ): Promise<void> {
+  ): Promise<{ success: boolean; wechatReplacedContent?: string }> {
     console.log(`\n🔄 开始处理: ${postId}`)
 
     const { fast = false, onProgress } = options
@@ -82,6 +82,11 @@ export class WorkflowOrchestrator {
       console.log(`   ✅ 处理完成: ${postId}`)
 
       console.log(`\n✅ 处理完成: ${postId}\n`)
+
+      // 获取微信替换后的内容
+      const wechatReplacedContent = (this.publishPipeline as any).wechatReplacedContent
+
+      return { success: true, wechatReplacedContent }
 
     } catch (error) {
       // 区分用户取消和真正的错误

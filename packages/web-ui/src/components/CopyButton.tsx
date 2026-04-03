@@ -33,8 +33,12 @@ export function CopyButton({
   const handleCopy = async () => {
     setCopying(true)
     try {
-      // 如果有 HTML 内容且是微信公众号平台，使用富文本复制
-      if (htmlContent && (_platform === 'wechat' || _platform === 'html')) {
+      // 微信公众号：复制带主题样式的完整 HTML（与预览窗口一致）
+      if (_platform === 'wechat' && htmlContent) {
+        // 包裹在 markdown-body 中，确保主题样式生效
+        const wrappedHTML = `<div class="markdown-body">${htmlContent}</div>`
+        await copyRichTextToClipboard(wrappedHTML, content)
+      } else if (htmlContent && _platform === 'html') {
         await copyRichTextToClipboard(htmlContent, content)
       } else {
         await copyToClipboard(content)
@@ -88,18 +92,39 @@ async function copyToClipboard(content: string): Promise<void> {
 }
 
 /**
- * 复制富文本内容到剪贴板（用于微信公众号等平台）
+ * 复制渲染后的 DOM 树到剪贴板（用于微信公众号等平台）
+ * 这会保留所有样式效果，而不是复制 HTML 源码
  */
-async function copyRichTextToClipboard(html: string, fallbackText: string): Promise<void> {
-  if (navigator.clipboard && navigator.clipboard.write) {
-    // 使用 Clipboard API 复制富文本
-    const clipboardItem = new ClipboardItem({
-      'text/html': new Blob([html], { type: 'text/html' }),
-      'text/plain': new Blob([fallbackText], { type: 'text/plain' })
-    })
-    await navigator.clipboard.write([clipboardItem])
-  } else {
-    // 降级方案：只复制纯文本
-    await copyToClipboard(fallbackText)
+async function copyRichTextToClipboard(html: string, _fallbackText: string): Promise<void> {
+  // 创建一个隐藏的容器来渲染 HTML
+  const container = document.createElement('div')
+  container.style.position = 'absolute'
+  container.style.left = '-9999px'
+  container.style.top = '0'
+  container.innerHTML = html
+  document.body.appendChild(container)
+
+  try {
+    // 使用 Selection API 复制渲染后的 DOM
+    const range = document.createRange()
+    range.selectNodeContents(container)
+
+    const selection = window.getSelection()
+    if (!selection) throw new Error('无法获取选区')
+
+    selection.removeAllRanges()
+    selection.addRange(range)
+
+    // 执行复制命令
+    const successful = document.execCommand('copy')
+    if (!successful) {
+      throw new Error('复制命令执行失败')
+    }
+
+    // 清除选区
+    selection.removeAllRanges()
+  } finally {
+    // 移除临时容器
+    document.body.removeChild(container)
   }
 }

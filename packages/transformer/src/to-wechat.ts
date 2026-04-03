@@ -1,4 +1,4 @@
-import { markdownToHTML } from './to-html.js'
+import { markdownToHTML, MarkdownToHTMLOptions } from './to-html.js'
 import { generatePlatformLinks, formatLinksAsHTML } from '@content-hub/core'
 import type { IndexedPost } from '@content-hub/core'
 
@@ -14,6 +14,8 @@ export interface WechatTransformOptions {
   blogBaseUrl?: string
   /** 是否添加相关文章链接 */
   includeRelatedLinks?: boolean
+  /** 是否移除本地图片（用于复制到外部平台） */
+  removeLocalImages?: boolean
 }
 
 /**
@@ -23,7 +25,10 @@ export async function transformForWechat(
   markdown: string,
   options?: WechatTransformOptions
 ): Promise<string> {
-  let html = await markdownToHTML(markdown)
+  const htmlOptions: MarkdownToHTMLOptions = {
+    removeLocalImages: options?.removeLocalImages
+  }
+  let html = await markdownToHTML(markdown, htmlOptions)
 
   // 如果提供了相关文章信息，生成平台链接HTML
   let relatedLinksHTML = ''

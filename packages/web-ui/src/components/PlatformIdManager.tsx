@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { showToast } from './Toast'
 import './PlatformIdManager.css'
 
 interface PlatformIdInfo {
@@ -92,11 +93,11 @@ export function PlatformIdManager({ postId, onUpdate }: PlatformIdManagerProps) 
         loadPlatformIds()
         onUpdate?.()
       } else {
-        alert('保存失败')
+        showToast('保存失败', 'error')
       }
     } catch (error) {
       console.error('保存失败:', error)
-      alert('保存失败')
+      showToast('保存失败', 'error')
     } finally {
       setSaving(false)
     }
@@ -116,11 +117,11 @@ export function PlatformIdManager({ postId, onUpdate }: PlatformIdManagerProps) 
         loadPlatformIds()
         onUpdate?.()
       } else {
-        alert('删除失败')
+        showToast('删除失败', 'error')
       }
     } catch (error) {
       console.error('删除失败:', error)
-      alert('删除失败')
+      showToast('删除失败', 'error')
     }
   }
 

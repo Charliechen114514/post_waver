@@ -161,19 +161,36 @@ export async function createAPIServer(options: {
 
       const parsed = await parsePost(filepath)
 
+      // 对于微信平台，尝试从job中获取替换后的内容
+      let useContent = parsed.content
+      if (platform === 'wechat') {
+        try {
+          const { jobManager } = await import('./workflow/job-manager.js')
+          const latestJob = jobManager.getLatestJobByPostId(id)
+          if (latestJob && latestJob.status === 'completed' && latestJob.outputs?.wechatReplacedContent) {
+            console.log(`✅ 使用job中的微信替换内容: ${id}`)
+            useContent = latestJob.outputs.wechatReplacedContent
+          }
+        } catch (error) {
+          console.warn('获取job内容失败，使用文件内容:', error)
+        }
+      }
+
       let transformedContent: string
       let htmlContent: string | null = null
 
       switch (platform) {
         case 'juejin':
-          transformedContent = await transformForJuejin(parsed.content)
-          // 为掘金平台生成 HTML 预览（使用标准样式）
-          htmlContent = await markdownToHTML(parsed.content)
+          // 用于复制的内容：移除本地图片
+          transformedContent = await transformForJuejin(useContent, { removeLocalImages: true })
+          // 用于预览的内容：保留本地图片显示
+          htmlContent = await markdownToHTML(useContent, { removeLocalImages: false })
           break
         case 'wechat':
-          transformedContent = await transformForWechat(parsed.content)
-          // 为微信公众号生成带主题的 HTML
-          const baseHTML = await markdownToHTML(parsed.content)
+          // 用于复制的内容：移除本地图片
+          transformedContent = await transformForWechat(useContent, { removeLocalImages: true })
+          // 用于预览的内容：保留本地图片显示
+          const baseHTML = await markdownToHTML(useContent, { removeLocalImages: false })
           let themeCSS = ''
 
           // 如果指定了主题，加载主题 CSS
@@ -196,11 +213,13 @@ export async function createAPIServer(options: {
           `
           break
         case 'html':
-          transformedContent = await markdownToHTML(parsed.content)
-          htmlContent = transformedContent
+          // 用于复制和预览的内容
+          transformedContent = await markdownToHTML(useContent, { removeLocalImages: true })
+          // 用于预览的内容：保留本地图片显示
+          htmlContent = await markdownToHTML(useContent, { removeLocalImages: false })
           break
         default:
-          transformedContent = parsed.content
+          transformedContent = useContent
       }
 
       return c.json({
@@ -224,6 +243,69 @@ export async function createAPIServer(options: {
     } catch (error) {
       console.error('获取平台ID失败:', error)
       return c.json({ error: '获取平台ID失败' }, 500)
+    }
+  })
+
+  // 提供 KaTeX 基础样式文件
+  app.get('/katex-base.css', async (c) => {
+    try {
+      const { readFile } = await import('fs/promises')
+      const { join } = await import('path')
+
+      const cssPath = join('packages/engine/src/preview/styles/katex-base.css')
+      const css = await readFile(cssPath, 'utf-8')
+
+      c.header('Content-Type', 'text/css')
+      return c.body(css)
+    } catch (error) {
+      console.error('读取 katex-base.css 失败:', error)
+      return c.text('/* KaTeX base CSS not found */', 404)
+    }
+  })
+
+  // 静态文件服务 - 提供图片等资源文件
+  app.get('/assets/*', async (c) => {
+    try {
+      const { readFile } = await import('fs/promises')
+      const { join } = await import('path')
+
+      const reqPath = c.req.path
+      // 提取 /assets/ 后面的相对路径
+      let relativePath = reqPath.replace(/^\/assets\//, '')
+
+      // 处理空路径
+      if (!relativePath || relativePath === '') {
+        console.error('❌ /assets/ 路径为空:', { url: c.req.url, path: reqPath })
+        return c.text('无效的资源路径：路径为空', 400)
+      }
+
+      // 映射到 content/posts/assets/ 目录
+      const fullPath = join(process.cwd(), 'content/posts/assets', relativePath)
+
+      // 读取文件
+      const fileContent = await readFile(fullPath)
+
+      // 根据文件扩展名设置 Content-Type
+      const ext = relativePath.split('.').pop()?.toLowerCase()
+      const contentTypes: Record<string, string> = {
+        'png': 'image/png',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'gif': 'image/gif',
+        'svg': 'image/svg+xml',
+        'webp': 'image/webp',
+        'ico': 'image/x-icon'
+      }
+
+      const contentType = contentTypes[ext || ''] || 'application/octet-stream'
+
+      return c.body(fileContent, 200, {
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=3600'
+      })
+    } catch (error) {
+      console.error('❌ 读取静态文件失败:', error)
+      return c.text('文件不存在', 404)
     }
   })
 
@@ -420,7 +502,7 @@ export async function createAPIServer(options: {
           try {
             jobManager.updateJob(jobId, { status: 'running', stepName: '开始处理' })
 
-            await orchestrator.processPost(postId, {
+            const result = await orchestrator.processPost(postId, {
               fast: skipPreview,
               onProgress: (step, total, stepName) => {
                 jobManager.updateJob(jobId, {
@@ -435,7 +517,10 @@ export async function createAPIServer(options: {
             jobManager.updateJob(jobId, {
               status: 'completed',
               stepName: '完成',
-              progress: 100
+              progress: 100,
+              outputs: {
+                wechatReplacedContent: result.wechatReplacedContent
+              }
             })
           } catch (error: any) {
             // 区分用户取消和真正的错误
