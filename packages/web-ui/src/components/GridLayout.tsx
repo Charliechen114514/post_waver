@@ -40,6 +40,8 @@ interface GridLayoutProps {
 
 const platforms: Platform[] = [
   { platform: 'juejin', name: '掘金', icon: '⛏️' },
+  { platform: 'csdn', name: 'CSDN', icon: '📝' },
+  { platform: 'zhihu', name: '知乎', icon: '🧠' },
   { platform: 'wechat', name: '微信公众号', icon: '💬' },
   { platform: 'html', name: 'HTML', icon: '🌐' }
 ]
@@ -490,7 +492,7 @@ export function GridLayout({ postId, job }: GridLayoutProps) {
                   <button className="btn-preset" onClick={() => setNewUrl('https://zhuanlan.zhihu.com/write')}>
                     知乎
                   </button>
-                  <button className="btn-preset" onClick={() => setNewUrl('https://mp.csdn.net/mp_blog/creation/editor')}>
+                  <button className="btn-preset" onClick={() => setNewUrl('https://editor.csdn.net/md/')}>
                     CSDN
                   </button>
                 </>

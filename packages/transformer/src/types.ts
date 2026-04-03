@@ -17,7 +17,7 @@ export interface TransformResult {
 /**
  * 支持的平台类型
  */
-export type Platform = 'html' | 'wechat' | 'juejin'
+export type Platform = 'html' | 'wechat' | 'juejin' | 'csdn' | 'zhihu'
 
 /**
  * 转换器函数类型

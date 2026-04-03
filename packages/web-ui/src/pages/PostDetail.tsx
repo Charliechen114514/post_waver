@@ -24,7 +24,7 @@ interface Post {
   related?: Array<{ id: string; title: string; score: number }>
 }
 
-type Platform = 'juejin' | 'wechat' | 'html'
+type Platform = 'juejin' | 'wechat' | 'html' | 'csdn' | 'zhihu'
 
 export default function PostDetail() {
   const { id } = useParams<{ id: string }>()
@@ -143,6 +143,8 @@ export default function PostDetail() {
               }}
             >
               <option value="juejin">掘金</option>
+              <option value="csdn">CSDN</option>
+              <option value="zhihu">知乎</option>
               <option value="wechat">微信公众号</option>
               <option value="html">HTML</option>
             </select>

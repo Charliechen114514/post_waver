@@ -577,12 +577,107 @@ export class WeChatConverter implements PlatformConverter {
 
 ### 4.1 输出格式
 
-- **格式**: Markdown（待确认）
-- **特殊要求**：待调研
+- **格式**: Markdown
+- **编码**: UTF-8
+- **换行符**: `\n`
 
-### 4.2 转换规则
+### 4.2 Markdown语法映射
 
-**待补充** - 需要进一步调研CSDN编辑器支持
+| 源语法 | 目标语法 | 转换规则 | 备注 |
+|--------|----------|----------|------|
+| 标题H1-H6 | `#` 标题 | 直接保留 | CSDN支持1-6级标题 |
+| 粗体 | `**text**` | 直接保留 | 也支持`__text__` |
+| 斜体 | `*text*` | 直接保留 | 也支持`_text_` |
+| 删除线 | `~~text~~` | 直接保留 | GFM语法 |
+| 行内代码 | `` `code` `` | 直接保留 | - |
+| 代码块 | <code>```lang</code> | 直接保留 | 需指定语言 |
+| 表格 | `\| 表格 \|` | 直接保留 | GFM语法 |
+| 任务列表 | `- [x]` | 直接保留 | GFM语法 |
+| 数学公式 | `$E=mc^2$` | 直接保留 | 支持LaTeX |
+| 分割线 | `***` | 直接保留 | - |
+| 引用 | `> text` | 直接保留 | - |
+
+### 4.3 特殊元素处理
+
+#### 数学公式
+
+**源格式**：
+```markdown
+行内公式：$E = mc^2$
+
+块级公式：
+$$
+\frac{n!}{k!(n-k)!} = \binom{n}{k}
+$$
+```
+
+**CSDN支持**：✅ 完全支持（LaTeX）
+**转换动作**：直接保留，无需转换
+
+#### Mermaid流程图
+
+**源格式**：
+````markdown
+```mermaid
+graph TD
+    A --> B
+```
+````
+
+**CSDN支持**：✅ 支持
+**转换动作**：直接保留
+
+#### 图片路径
+
+**源格式**：
+```markdown
+![图片描述](content/assets/images/image.png)
+```
+
+**转换规则**：
+```typescript
+function convertCsdnImagePath(sourcePath: string): ImagePathResult {
+  // 1. 判断是否为外链
+  if (sourcePath.startsWith('http://') || sourcePath.startsWith('https://')) {
+    return {
+      type: 'external',
+      url: sourcePath,
+      needsUpload: false
+    }
+  }
+
+  // 2. 本地图片
+  return {
+    type: 'local',
+    url: sourcePath,
+    needsUpload: true, // 需要用户手动上传到CSDN
+    placeholder: `📷 图片: ${filename} (请手动上传)`
+  }
+}
+```
+
+### 4.4 转换实现
+
+**实现文件**：`packages/transformer/src/to-csdn.ts`
+
+**核心功能**：
+- 保持原始Markdown格式
+- 处理本地图片（转换为占位符）
+- 支持相关文章链接生成
+- 支持仓库引用注入
+
+**使用示例**：
+```typescript
+import { transformForCsdn } from '@content-hub/transformer'
+
+const markdown = '# 标题\n\n这是内容'
+const result = await transformForCsdn(markdown, {
+  removeLocalImages: true,
+  includeRelatedLinks: true,
+  postId: 'post-123',
+  relatedPosts: [...]
+})
+```
 
 ---
 
@@ -590,12 +685,107 @@ export class WeChatConverter implements PlatformConverter {
 
 ### 5.1 输出格式
 
-- **格式**: Markdown（待确认）
-- **特殊要求**：待调研
+- **格式**: Markdown
+- **编码**: UTF-8
+- **换行符**: `\n`
 
-### 5.2 转换规则
+### 5.2 Markdown语法映射
 
-**待补充** - 需要进一步调研知乎编辑器支持
+| 源语法 | 目标语法 | 转换规则 | 备注 |
+|--------|----------|----------|------|
+| 标题H1-H6 | `#` 标题 | 直接保留 | 知乎支持1-6级标题 |
+| 粗体 | `**text**` | 直接保留 | 也支持`__text__` |
+| 斜体 | `*text*` | 直接保留 | 也支持`_text_` |
+| 删除线 | `~~text~~` | 直接保留 | GFM语法 |
+| 行内代码 | `` `code` `` | 直接保留 | - |
+| 代码块 | <code>```lang</code> | 直接保留 | 需指定语言 |
+| 表格 | `\| 表格 \|` | 直接保留 | GFM语法 |
+| 任务列表 | `- [x]` | 直接保留 | GFM语法 |
+| 数学公式 | `$E=mc^2$` | 直接保留 | 支持LaTeX |
+| 分割线 | `***` | 直接保留 | - |
+| 引用 | `> text` | 直接保留 | - |
+
+### 5.3 特殊元素处理
+
+#### 数学公式
+
+**源格式**：
+```markdown
+行内公式：$E = mc^2$
+
+块级公式：
+$$
+\frac{n!}{k!(n-k)!} = \binom{n}{k}
+$$
+```
+
+**知乎支持**：✅ 完全支持（LaTeX）
+**转换动作**：直接保留，无需转换
+
+#### Mermaid流程图
+
+**源格式**：
+````markdown
+```mermaid
+graph TD
+    A --> B
+```
+````
+
+**知乎支持**：⚠️ 部分支持（需测试）
+**转换动作**：直接保留
+
+#### 图片路径
+
+**源格式**：
+```markdown
+![图片描述](content/assets/images/image.png)
+```
+
+**转换规则**：
+```typescript
+function convertZhihuImagePath(sourcePath: string): ImagePathResult {
+  // 1. 判断是否为外链
+  if (sourcePath.startsWith('http://') || sourcePath.startsWith('https://')) {
+    return {
+      type: 'external',
+      url: sourcePath,
+      needsUpload: false
+    }
+  }
+
+  // 2. 本地图片
+  return {
+    type: 'local',
+    url: sourcePath,
+    needsUpload: true, // 需要用户手动上传到知乎
+    placeholder: `📷 图片: ${filename} (请手动上传)`
+  }
+}
+```
+
+### 5.4 转换实现
+
+**实现文件**：`packages/transformer/src/to-zhihu.ts`
+
+**核心功能**：
+- 保持原始Markdown格式
+- 处理本地图片（转换为占位符）
+- 支持相关文章链接生成
+- 支持仓库引用注入
+
+**使用示例**：
+```typescript
+import { transformForZhihu } from '@content-hub/transformer'
+
+const markdown = '# 标题\n\n这是内容'
+const result = await transformForZhihu(markdown, {
+  removeLocalImages: true,
+  includeRelatedLinks: true,
+  postId: 'post-123',
+  relatedPosts: [...]
+})
+```
 
 ---
 

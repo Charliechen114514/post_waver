@@ -196,7 +196,7 @@ export class FullPublishPipeline {
         const outputDir = join(process.cwd(), 'output', 'temp')
 
         // 处理所有平台的图片
-        const platforms = ['juejin', 'wechat', 'html']
+        const platforms = ['juejin', 'csdn', 'zhihu', 'wechat', 'html']
         const results = await this.imageManager.processMultiPlatformImages(
           postId,
           content,

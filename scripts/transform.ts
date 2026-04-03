@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-import { markdownToHTML, transformForWechat, transformForJuejin } from '../packages/transformer/src/index.js'
+import { markdownToHTML, transformForWechat, transformForJuejin, transformForCsdn, transformForZhihu } from '../packages/transformer/src/index.js'
 import { injectRepoReference } from '../packages/core/src/repo-injector.js'
 import { readFileSync } from 'fs'
 import { Command } from 'commander'
@@ -9,7 +9,7 @@ const program = new Command()
 program
   .name('transform')
   .description('转换 Markdown 文章为不同平台格式')
-  .argument('<platform>', '目标平台: html, wechat, juejin')
+  .argument('<platform>', '目标平台: html, wechat, juejin, csdn, zhihu')
   .argument('<file>', 'Markdown 文件路径')
   .option('--repo-owner <owner>', '仓库拥有者（用于添加仓库引用）')
   .option('--repo-name <name>', '仓库名称（用于添加仓库引用）')
@@ -105,9 +105,63 @@ program
           console.log(transformed)
           break
 
+        case 'csdn':
+          transformed = await transformForCsdn(content)
+          if (options.repoOwner && options.repoName) {
+            const post = {
+              id: file,
+              filepath: file,
+              frontmatter: {},
+              content,
+              ast: null,
+              contentHash: '',
+              scannedAt: new Date()
+            }
+            transformed = injectRepoReference(
+              transformed,
+              post,
+              {
+                owner: options.repoOwner,
+                repo: options.repoName,
+                branch: options.repoBranch,
+                description: options.repoDesc
+              },
+              'csdn'
+            )
+          }
+          console.log(transformed)
+          break
+
+        case 'zhihu':
+          transformed = await transformForZhihu(content)
+          if (options.repoOwner && options.repoName) {
+            const post = {
+              id: file,
+              filepath: file,
+              frontmatter: {},
+              content,
+              ast: null,
+              contentHash: '',
+              scannedAt: new Date()
+            }
+            transformed = injectRepoReference(
+              transformed,
+              post,
+              {
+                owner: options.repoOwner,
+                repo: options.repoName,
+                branch: options.repoBranch,
+                description: options.repoDesc
+              },
+              'zhihu'
+            )
+          }
+          console.log(transformed)
+          break
+
         default:
           console.error(`❌ 不支持的平台: ${platform}`)
-          console.error('   支持的平台: html, wechat, juejin')
+          console.error('   支持的平台: html, wechat, juejin, csdn, zhihu')
           process.exit(1)
       }
 

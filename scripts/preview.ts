@@ -7,7 +7,7 @@ const program = new Command()
 program
   .name('preview')
   .description('预览 Markdown 文章在目标平台的渲染效果')
-  .argument('<platform>', '目标平台: wechat, juejin, html')
+  .argument('<platform>', '目标平台: wechat, juejin, html, csdn, zhihu')
   .argument('<file>', 'Markdown 文件路径')
   .action(async (platform: string, file: string) => {
     try {
@@ -50,7 +50,7 @@ program
       console.error(error instanceof Error ? error.message : '未知错误')
       console.error('\n💡 可能的原因:')
       console.error('   - 文件路径不正确')
-      console.error('   - 平台名称不支持 (支持: wechat, juejin, html)')
+      console.error('   - 平台名称不支持 (支持: wechat, juejin, html, csdn, zhihu)')
       console.error('   - Markdown 格式错误\n')
       process.exit(1)
     }

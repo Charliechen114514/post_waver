@@ -30,7 +30,7 @@ interface InjectionTemplate {
   updatedAt?: string
 }
 
-type Platform = 'juejin' | 'wechat' | 'html'
+type Platform = 'juejin' | 'wechat' | 'html' | 'csdn' | 'zhihu'
 
 export default function PublishWorkspace() {
   const navigate = useNavigate()
@@ -384,6 +384,8 @@ export default function PublishWorkspace() {
               <div className="platform-selector">
                 {[
                   { value: 'juejin', label: '掘金', icon: '⛏️' },
+                  { value: 'csdn', label: 'CSDN', icon: '📝' },
+                  { value: 'zhihu', label: '知乎', icon: '🧠' },
                   { value: 'wechat', label: '微信公众号', icon: '💬' },
                   { value: 'html', label: 'HTML', icon: '🌐' }
                 ].map(platform => (

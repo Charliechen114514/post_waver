@@ -240,7 +240,7 @@ export async function createAPIServer(options: {
       const { id } = c.req.param()
       const { platform, theme, injectionTemplateId, includeRelatedLinks = true } = await c.req.json()
 
-      if (!['juejin', 'wechat', 'html'].includes(platform)) {
+      if (!['juejin', 'csdn', 'zhihu', 'wechat', 'html'].includes(platform)) {
         return c.json({ error: '不支持的平台' }, 400)
       }
 
@@ -405,6 +405,20 @@ export async function createAPIServer(options: {
         case 'juejin':
           // 用于复制的内容：移除本地图片
           transformedContent = await transformForJuejin(useContent, { removeLocalImages: true })
+          // 用于预览的内容：保留本地图片显示
+          htmlContent = await markdownToHTML(useContent, { removeLocalImages: false })
+          break
+        case 'csdn':
+          // 用于复制的内容：移除本地图片
+          const { transformForCsdn } = await import('@content-hub/transformer')
+          transformedContent = await transformForCsdn(useContent, { removeLocalImages: true })
+          // 用于预览的内容：保留本地图片显示
+          htmlContent = await markdownToHTML(useContent, { removeLocalImages: false })
+          break
+        case 'zhihu':
+          // 用于复制的内容：移除本地图片
+          const { transformForZhihu } = await import('@content-hub/transformer')
+          transformedContent = await transformForZhihu(useContent, { removeLocalImages: true })
           // 用于预览的内容：保留本地图片显示
           htmlContent = await markdownToHTML(useContent, { removeLocalImages: false })
           break

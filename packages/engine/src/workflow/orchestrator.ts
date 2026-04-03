@@ -197,9 +197,11 @@ export class WorkflowOrchestrator {
     console.log(`\n   ✅ 预览服务器已启动！端口: ${server.port}`)
     console.log(`   📱 预览链接：`)
 
-    const platforms = ['juejin', 'wechat', 'html']
+    const platforms = ['juejin', 'csdn', 'zhihu', 'wechat', 'html']
     const platformNames: Record<string, string> = {
       juejin: '掘金',
+      csdn: 'CSDN',
+      zhihu: '知乎',
       wechat: '微信公众号',
       html: 'HTML'
     }

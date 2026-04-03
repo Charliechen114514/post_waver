@@ -1,17 +1,17 @@
 import { parsePost } from '@content-hub/core'
-import { transformForWechat, transformForJuejin, markdownToHTML } from '@content-hub/transformer'
+import { transformForWechat, transformForJuejin, transformForCsdn, transformForZhihu, markdownToHTML } from '@content-hub/transformer'
 import { createPreviewServer, PreviewContent, PreviewServer } from './server.js'
 
 /**
  * 支持的平台类型
  */
-export type Platform = 'wechat' | 'juejin' | 'html'
+export type Platform = 'wechat' | 'juejin' | 'html' | 'csdn' | 'zhihu'
 
 /**
  * 平台验证函数
  */
 function isValidPlatform(platform: string): platform is Platform {
-  return ['wechat', 'juejin', 'html'].includes(platform)
+  return ['wechat', 'juejin', 'html', 'csdn', 'zhihu'].includes(platform)
 }
 
 /**
@@ -23,6 +23,10 @@ async function transformForPlatform(content: string, platform: Platform): Promis
       return await transformForWechat(content)
     case 'juejin':
       return await transformForJuejin(content)
+    case 'csdn':
+      return await transformForCsdn(content)
+    case 'zhihu':
+      return await transformForZhihu(content)
     case 'html':
       return await markdownToHTML(content)
     default:
@@ -41,7 +45,7 @@ export async function startPreview(postPath: string, platform: string): Promise<
   // 验证平台
   if (!isValidPlatform(platform)) {
     throw new Error(
-      `不支持的平台: ${platform}。支持的平台: wechat, juejin, html`
+      `不支持的平台: ${platform}。支持的平台: wechat, juejin, html, csdn, zhihu`
     )
   }
 
