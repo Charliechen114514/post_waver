@@ -12,16 +12,22 @@ program
   .option('--include-drafts', '包含草稿文章（默认：包含所有）', true)
   .option('--exclude-drafts', '排除草稿文章', false)
   .option('--update-index', '更新索引文件', true)
+  .option('--inject', '注入 frontmatter 到文件（只补充缺失字段）', false)
   .option('-o, --output <format>', '输出格式 (json|table|summary)', 'table')
   .action(async (options) => {
     try {
       // 如果指定了 --exclude-drafts，则不包含草稿；否则默认包含所有
       const includeDrafts = !options.excludeDrafts
 
+      if (options.inject) {
+        console.log('💉 注入模式已启用，将自动补充缺失的 frontmatter 字段...\n')
+      }
+
       const result = await scan(options.dir, {
         recursive: options.recursive,
         includeDrafts: includeDrafts,
-        updateIndex: options.updateIndex
+        updateIndex: options.updateIndex,
+        inject: options.inject
       })
 
       if (options.output === 'json') {
@@ -42,6 +48,10 @@ program
       console.log(`   - 新文章: ${result.newPosts.length}`)
       console.log(`   - 已更新: ${result.updatedPosts.length}`)
       console.log(`   - 耗时: ${result.duration}ms`)
+
+      if (options.inject) {
+        console.log(`   - 💾 注入模式: 已将缺失的 frontmatter 写入文件`)
+      }
     } catch (error) {
       console.error('❌ 扫描失败:', error)
       process.exit(1)

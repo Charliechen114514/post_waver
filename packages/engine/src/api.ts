@@ -47,16 +47,29 @@ export async function createAPIServer(options: {
       console.log(`✅ 找到 ${posts.length} 篇文章`)
 
       // 转换为前端需要的格式
-      const formattedPosts = posts.map(post => ({
-        id: post.postId,
-        title: post.title || post.postId,
-        date: post.createdAt?.toISOString() || new Date().toISOString(),
-        tags: [], // 数据库暂无 tags 字段，先返回空数组
-        draft: post.status !== 'published',
-        filepath: post.currentPath || post.originalPath || '',
-        status: post.status,
-        workflowStatus: post.workflowStatus
-      }))
+      const formattedPosts = posts.map(post => {
+        // 解析 tags JSON 字符串
+        let tags: string[] = []
+        if (post.tags) {
+          try {
+            tags = JSON.parse(post.tags)
+          } catch {
+            tags = []
+          }
+        }
+
+        return {
+          id: post.postId,
+          title: post.title || post.postId,
+          date: post.createdAt?.toISOString() || new Date().toISOString(),
+          tags,
+          draft: post.status !== 'published',
+          filepath: post.currentPath || post.originalPath || '',
+          status: post.status,
+          workflowStatus: post.workflowStatus,
+          cleanedAt: post.cleanedAt?.toISOString()
+        }
+      })
 
       console.log(`📤 返回 ${formattedPosts.length} 篇文章给前端`)
 
@@ -1212,6 +1225,43 @@ export async function createAPIServer(options: {
     } catch (error) {
       console.error('回滚失败:', error)
       return c.json({ error: '回滚失败', details: error instanceof Error ? error.message : String(error) }, 500)
+    }
+  })
+
+  // 清理文章文件（保留数据库记录）
+  app.post('/api/posts/:id/clean', async (c) => {
+    try {
+      const { id } = c.req.param()
+      const body = await c.req.json().catch(() => ({}))
+      const { dryRun = false } = body
+
+      console.log(`\n🧹 ${dryRun ? '[预演]' : '[实际]'}清理文章: ${id}`)
+
+      const { PostCleaner } = await import('./workflow/post-cleaner.js')
+      const cleaner = new PostCleaner()
+
+      const result = await cleaner.clean(id, { dryRun })
+
+      if (result.success) {
+        return c.json({
+          success: true,
+          deletedFiles: result.deletedFiles,
+          savedTags: result.savedTags,
+          message: dryRun ? '预演完成' : '清理完成'
+        })
+      } else {
+        return c.json({
+          success: false,
+          error: result.error
+        }, 400)
+      }
+    } catch (error) {
+      console.error('清理失败:', error)
+      return c.json({
+        success: false,
+        error: '清理失败',
+        details: error instanceof Error ? error.message : String(error)
+      }, 500)
     }
   })
 

@@ -100,14 +100,29 @@ PostWaver 项目的完整文档集合。
 #### 发布到掘金
 → [掘金半自动指南](guides/juejin-semi-auto-guide.md)
 
+#### 发布到 CSDN
+→ [CSDN半自动指南](guides/csdn-semi-auto-guide.md)
+
+#### 发布到知乎
+→ [知乎半自动指南](guides/zhihu-semi-auto-guide.md)
+
 #### 发布到微信公众号
 → [微信公众号半自动指南](guides/wechat-semi-auto-guide.md)
+
+#### 使用 Web UI
+→ [Web UI用户指南](guides/web-ui-guide.md)
 
 #### 同步到 Hexo 博客
 → [Hexo 同步指南](guides/hexo-sync-guide.md)
 
 #### 了解平台转换规则
 → [平台转换规范](guides/platform-conversion-specs.md)
+
+#### 自动补全 Frontmatter
+→ [Frontmatter 自动生成](FRONTMATTER_AUTO_GENERATION.md)
+
+#### 清理已发布文章
+→ [文章清理功能指南](guides/post-cleanup-guide.md) ⭐ NEW
 
 #### 遇到问题
 → [故障排查指南](TROUBLESHOOTING.md)
@@ -133,6 +148,7 @@ PostWaver 项目的完整文档集合。
 | 🔴 **必读** | QUICK_START.md |
 | 🟡 **常用** | USER_GUIDE.md, CLI_REFERENCE.md |
 | 🟢 **参考** | TROUBLESHOOTING.md, DIRECTORY_STRUCTURE.md |
+| ⭐ **更新** | [CHANGELOG-v3.2.0](CHANGELOG-v3.2.0.md) - 最新功能 |
 
 ---
 
@@ -141,7 +157,10 @@ PostWaver 项目的完整文档集合。
 ### 发布指南
 
 - **[掘金半自动指南](guides/juejin-semi-auto-guide.md)** - Markdown 语法支持、编辑器使用
+- **[CSDN半自动指南](guides/csdn-semi-auto-guide.md)** - CSDN 平台发布、Markdown 支持
+- **[知乎半自动指南](guides/zhihu-semi-auto-guide.md)** - 知乎平台发布、编辑器兼容性
 - **[微信公众号半自动指南](guides/wechat-semi-auto-guide.md)** - 公众号 Markdown 支持、发布流程
+- **[Web UI用户指南](guides/web-ui-guide.md)** - Web 界面使用、发布工作台
 - **[平台转换规范](guides/platform-conversion-specs.md)** - 转换规则、兼容性处理
 
 ### 功能指南
@@ -149,6 +168,10 @@ PostWaver 项目的完整文档集合。
 - **[Hexo 同步指南](guides/hexo-sync-guide.md)** - 博客同步、部署
 - **[内容关联](guides/content-relationships.md)** - 相关文章、链接管理
 - **[图片标准化](guides/m1.1-image-normalization.md)** - 图片处理、路径规范
+- **[数学公式支持](guides/math-formula-support.md)** - LaTeX 语法、KaTeX 渲染
+- **[平台链接指南](guides/platform-linking-guide.md)** - 跨平台链接、ID 管理
+- **[文章清理功能](guides/post-cleanup-guide.md)** - 清理已发布文章、保留数据记录 ⭐ NEW
+- **[Frontmatter 注入方式对比](guides/frontmatter-injection-modes.md)** - 注入模式对比与选择 ⭐ NEW
 
 ---
 
@@ -161,6 +184,7 @@ PostWaver 项目的完整文档集合。
 
 ## ✨ 功能特性
 
+- **[AutoTag 自动标签系统](features/auto-tag-system.md)** - AI 智能标签生成、缓存管理
 - **[仓库引用注入](features/repo-injector.md)** - 自动注入仓库链接
 - **[微信图片上传](features/wechat-image-upload.md)** - 自动上传、错误处理
 
@@ -173,6 +197,29 @@ PostWaver 项目的完整文档集合。
 ---
 
 ## 🔄 更新日志
+
+### v3.2.0 (2026-04-03) ⭐ NEW
+
+- ✅ **新增功能**：Frontmatter 智能注入（`pnpm scan --inject`）
+- ✅ **新增功能**：文章清理功能（`pnpm post:clean`）
+- ✅ **功能增强**：智能检测并只补充缺失的 frontmatter 字段
+- ✅ **数据库迁移**：添加 `tags` 和 `cleanedAt` 字段
+- ✅ **新增文档**：文章清理功能完整指南
+- ✅ **文档更新**：CLI 参考、Frontmatter 自动生成、README
+
+**主要改进**：
+- `pnpm scan --inject`：智能注入缺失的 frontmatter，不覆盖已有字段
+- `pnpm post:clean`：安全清理已发布文章，保留数据库记录
+- 清理功能支持预演模式（`--dry-run`）
+- 自动提取并保存标签到数据库
+
+### v3.1.0 (2026-04-03)
+
+- ✅ **新增平台指南**：CSDN、知乎半自动发布指南
+- ✅ **新增 Web UI 指南**：完整的 Web 界面使用文档
+- ✅ **新增功能指南**：数学公式支持、AutoTag 系统、平台链接
+- ✅ **更新 CLI 参考**：新增平台转换、标题注入、标签缓存命令
+- ✅ **优化导航**：新增 5 个平台指南，3 个功能指南
 
 ### v3.0.0 (2026-04-02)
 
@@ -221,5 +268,5 @@ PostWaver 项目的完整文档集合。
 ---
 
 **维护者**：PostWaver Team  
-**最后更新**：2026-04-02  
-**版本**：3.0.0
+**最后更新**：2026-04-03  
+**版本**：3.1.0

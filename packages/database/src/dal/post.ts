@@ -200,4 +200,46 @@ export class PostDAL {
       movedAt: post.movedAt || undefined
     }))
   }
+
+  /**
+   * 清理文章（保留数据库记录，删除文件）
+   */
+  async cleanPost(postId: string, tags: string[]): Promise<void> {
+    await prisma.post.update({
+      where: { postId },
+      data: {
+        status: 'archived',
+        tags: JSON.stringify(tags),
+        cleanedAt: new Date(),
+        currentPath: null,
+        workflowLocation: null,
+        workflowStatus: null
+      }
+    })
+  }
+
+  /**
+   * 获取已清理的文章列表
+   */
+  async getCleanedPosts() {
+    return await prisma.post.findMany({
+      where: {
+        status: 'archived',
+        cleanedAt: { not: null }
+      },
+      include: { publishRecords: true },
+      orderBy: { cleanedAt: 'desc' }
+    })
+  }
+
+  /**
+   * 检查文章是否已清理
+   */
+  async isCleaned(postId: string): Promise<boolean> {
+    const post = await prisma.post.findUnique({
+      where: { postId },
+      select: { cleanedAt: true }
+    })
+    return post?.cleanedAt !== null
+  }
 }

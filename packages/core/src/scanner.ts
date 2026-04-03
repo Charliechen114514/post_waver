@@ -11,9 +11,10 @@ export async function scanDirectory(
   options: {
     recursive?: boolean
     includeDrafts?: boolean
+    inject?: boolean // 是否注入 frontmatter 到文件
   } = {}
 ): Promise<Post[]> {
-  const { recursive = true, includeDrafts = false } = options
+  const { recursive = true, includeDrafts = false, inject = false } = options
 
   // 扫描所有 .md 文件
   const pattern = recursive ? '**/*.md' : '*.md'
@@ -26,7 +27,10 @@ export async function scanDirectory(
   const posts: Post[] = []
   for (const file of files) {
     try {
-      const post = await parsePost(file)
+      const post = await parsePost(file, {
+        saveToFile: inject, // 如果启用 inject，则保存到文件
+        injectMode: 'missing' // 只注入缺失的字段
+      })
 
       // 过滤草稿
       if (!includeDrafts && post.frontmatter.draft) {
@@ -215,16 +219,17 @@ export async function scan(
     recursive?: boolean
     includeDrafts?: boolean
     updateIndex?: boolean
+    inject?: boolean // 是否注入 frontmatter 到文件
   } = {}
 ): Promise<ScanResult> {
   const startTime = Date.now()
-  const { recursive = true, includeDrafts = false, updateIndex = true } = options
+  const { recursive = true, includeDrafts = false, updateIndex = true, inject = false } = options
 
   // 读取现有索引
   const existingIndex = await readIndex()
 
   // 扫描目录
-  const posts = await scanDirectory(dir, { recursive, includeDrafts })
+  const posts = await scanDirectory(dir, { recursive, includeDrafts, inject })
 
   // 检测新文章和已更新文章
   const newPosts = detectNewPosts(existingIndex, posts)

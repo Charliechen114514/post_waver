@@ -1,7 +1,7 @@
 # CLI 命令参考
 
-> **版本**: v3.0  
-> **更新日期**: 2026-04-02
+> **版本**: v3.1
+> **更新日期**: 2026-04-03
 
 ---
 
@@ -15,6 +15,8 @@
 - [Hexo 集成](#hexo-集成)
 - [工作流管理](#工作流管理)
 - [平台 ID 管理](#平台-id-管理)
+- [标题注入管理](#标题注入管理)
+- [标签缓存管理](#标签缓存管理)
 - [数据库管理](#数据库管理)
 - [测试工具](#测试工具)
 
@@ -34,6 +36,19 @@ pnpm dev:web
 # 仅启动 API 服务器
 pnpm dev:api
 ```
+
+**开发环境启动流程**：
+
+1. 📚 **扫描文章** - 扫描 `content/posts` 目录
+2. 💾 **自动注入 Frontmatter** - 智能补充缺失的字段（title, date, tags 等）
+3. 🔗 **注入相关链接** - 添加相关文章链接
+4. 🚀 **启动服务器** - API (3001) + Web UI (5173)
+
+**特性**：
+- ✅ 自动维护文章元数据完整性
+- ✅ 只补充缺失字段，不覆盖已有内容
+- ✅ 实时反馈处理进度
+- ✅ 适合开发环境使用
 
 ### 构建项目
 
@@ -68,18 +83,52 @@ pnpm typecheck
 ### 扫描内容
 
 ```bash
-# 扫描内容目录
+# 扫描内容目录（默认只输出摘要）
 pnpm scan
 
-# 表格格式输出
-pnpm scan:table
+# 扫描并以表格格式输出
+pnpm scan --output table
 
-# 包含草稿
-pnpm scan:drafts
+# 扫描并以 JSON 格式输出
+pnpm scan --output json
 
-# 重建索引
+# 扫描并注入缺失的 frontmatter 字段
+pnpm scan --inject
+
+# 扫描指定目录
+pnpm scan --dir content/posts
+
+# 包含草稿文章
+pnpm scan --include-drafts
+
+# 排除草稿文章
+pnpm scan --exclude-drafts
+
+# 重建索引（不更新数据库）
+pnpm scan --no-update-index
+
+# 重建完整索引
 pnpm index:rebuild
 ```
+
+**扫描选项说明**：
+
+| 选项 | 说明 |
+|------|------|
+| `--dir <directory>` | 指定扫描目录（默认：content/posts） |
+| `--recursive` | 递归扫描子目录（默认：true） |
+| `--inject` | **智能注入缺失的 frontmatter 字段到文件** |
+| `--include-drafts` | 包含草稿文章 |
+| `--exclude-drafts` | 排除草稿文章 |
+| `--update-index` | 更新数据库索引（默认：true） |
+| `--no-update-index` | 不更新数据库索引 |
+| `--output <format>` | 输出格式：table/json/summary |
+
+**`--inject` 模式特性**：
+- ✅ 只补充缺失的字段（title, date, tags, categories, description）
+- ✅ 不覆盖已有的 frontmatter 字段
+- ✅ 智能检测并最小化文件写入
+- ✅ 支持 AI 智能生成和规则生成两种方案
 
 ### 同步到博客
 
@@ -143,9 +192,20 @@ pnpm transform:html <postId>
 # 转换为掘金格式
 pnpm transform:juejin <postId>
 
+# 转换为 CSDN 格式
+pnpm transform:csdn <postId>
+
+# 转换为知乎格式
+pnpm transform:zhihu <postId>
+
 # 转换为微信格式
 pnpm transform:wechat <postId>
 ```
+
+**转换选项**:
+- `--remove-local-images` - 移除本地图片，添加上传占位符
+- `--include-related-links` - 包含相关文章链接
+- `--output <path>` - 输出到文件
 
 ### 预览转换
 
@@ -262,6 +322,37 @@ pnpm workflow:rollback <postId>
 pnpm workflow:reset-all
 ```
 
+### 清理已发布文章
+
+```bash
+# 清理文章文件（保留数据库记录）
+pnpm post:clean <postId>
+
+# 预演模式（不实际删除）
+pnpm post:clean <postId> --dry-run
+
+# 预演模式（简写）
+pnpm post:clean <postId> -n
+```
+
+**清理功能说明**：
+
+- ✅ 删除本地 Markdown 文件和资源文件
+- ✅ 保留数据库记录和发布历史
+- ✅ 保留平台链接和标签信息
+- ✅ 更新文章状态为 `archived`
+- ⚠️ 只能清理已发布（`published`）状态的文章
+- ⚠️ 清理后无法恢复文件
+
+**清理前确认**：
+```bash
+# 查看文章状态
+pnpm post:status
+
+# 检查平台链接是否已保存
+pnpm platform:id:status <postId>
+```
+
 ---
 
 ## 平台 ID 管理
@@ -269,20 +360,112 @@ pnpm workflow:reset-all
 ### 管理 ID
 
 ```bash
-# 列出平台 ID
-pnpm platform:id:list <postId>
-
 # 更新平台 ID
-pnpm platform:id:update
+pnpm platform:id:update <postId> --platform <platform> --id <platformId> [--url <url>]
 
 # 删除平台 ID
-pnpm platform:id:remove
+pnpm platform:id:remove <postId> --platform <platform>
 
-# 查看状态
-pnpm platform:id:status
+# 查看平台 ID 状态
+pnpm platform:id:status <postId>
 
-# 导入配置
-pnpm platform:id:import
+# 列出所有平台 ID
+pnpm platform:id:list
+
+# 批量导入平台 ID
+pnpm platform:id:import <jsonFile>
+```
+
+**支持的平台**:
+- `juejin` - 掘金
+- `csdn` - CSDN
+- `zhihu` - 知乎
+- `wechat` - 微信公众号
+- `html` - HTML
+
+**使用示例**:
+```bash
+# 更新掘金文章 ID
+pnpm platform:id:update post-123 --platform juejin --id 7123456789
+
+# 删除知乎文章 ID
+pnpm platform:id:remove post-123 --platform zhihu
+
+# 查看文章的平台 ID 状态
+pnpm platform:id:status post-123
+
+# 批量导入
+pnpm platform:id:import platform-ids.json
+```
+
+---
+
+## 标题注入管理
+
+### 注入模板
+
+```bash
+# 为单篇文章注入标题
+pnpm title:injector:article <articleId> --template <templateId>
+
+# 批量注入标题
+pnpm title:injector:batch --template <templateId>
+
+# 预览注入效果
+pnpm title:injector:preview <articleId> --template <templateId>
+```
+
+**使用示例**:
+```bash
+# 使用指定模板为文章注入标题
+pnpm title:injector:article post-123 --template welcome-template
+
+# 批量为所有文章注入标题
+pnpm title:injector:batch --template default-signature
+
+# 预览注入效果
+pnpm title:injector:preview post-123 --template tech-sharing
+```
+
+---
+
+## 标签缓存管理
+
+### 缓存操作
+
+```bash
+# 查看标签统计
+pnpm tag:stats
+
+# 清理未使用的标签
+pnpm tag:cleanup [--unused-days=<days>]
+
+# 重置标签缓存
+pnpm tag:reset
+
+# 重建标签缓存
+pnpm tag:rebuild
+
+# 标签规范化
+pnpm tag:normalize [--case=<lower|upper>]
+
+# 合并相似标签
+pnpm tag:merge --source=<oldTag> --target=<newTag>
+```
+
+**使用示例**:
+```bash
+# 查看标签使用统计
+pnpm tag:stats
+
+# 清理 30 天未使用的标签
+pnpm tag:cleanup --unused-days=30
+
+# 合并标签
+pnpm tag:merge --source=js --target=javascript
+
+# 标签名转为小写
+pnpm tag:normalize --case=lower
 ```
 
 ---

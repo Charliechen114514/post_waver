@@ -68,6 +68,7 @@
     "post:publish:set-url": "tsx scripts/publish-set-url.ts",
     "post:publish:history": "tsx scripts/publish-history.ts",
     "post:publish:cleanup": "tsx scripts/publish-cleanup.ts",
+    "post:clean": "tsx scripts/post-clean.ts",
     "config:set": "tsx scripts/config-set.ts",
     "config:list": "tsx scripts/config-list.ts",
     "hexo:config": "tsx scripts/hexo-config.ts",

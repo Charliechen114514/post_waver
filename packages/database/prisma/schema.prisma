@@ -16,6 +16,10 @@ model Post {
   updatedAt   DateTime @updatedAt
   publishedAt DateTime?
 
+  // Clean/archived fields
+  tags        String?  // JSON array, stores article tags
+  cleanedAt   DateTime? // When the post files were cleaned up
+
   // Workflow fields
   workflowStatus   String? @default("pending") // pending, processing, done
   workflowLocation String? // posts, done
@@ -30,6 +34,7 @@ model Post {
   @@index([status])
   @@index([postId])
   @@index([workflowStatus])
+  @@index([cleanedAt])
 }
 
 model PublishRecord {

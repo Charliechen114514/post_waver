@@ -33,13 +33,17 @@ async function runScan() {
     const result = await scan('content/posts', {
       recursive: true,
       includeDrafts: true,
-      updateIndex: true
+      updateIndex: true,
+      inject: true  // ✅ 开发环境自动注入缺失的 frontmatter
     })
 
     console.log(`\n✅ 扫描完成: 找到 ${result.posts.length} 篇文章`)
     console.log(`   - 新文章: ${result.newPosts.length}`)
     console.log(`   - 已更新: ${result.updatedPosts.length}`)
     console.log(`   - 耗时: ${result.duration}ms`)
+    if (result.newPosts.length > 0) {
+      console.log(`   - 💾 已自动注入 Frontmatter 到新文章`)
+    }
 
     return result.posts
   } catch (error) {
@@ -89,7 +93,13 @@ async function injectLinks() {
 async function main() {
   console.log('🚀 Starting Content Hub development servers...\n')
 
-  // 1. 扫描内容
+  console.log('📋 启动流程:')
+  console.log('   1️⃣  扫描文章并自动注入 Frontmatter')
+  console.log('   2️⃣  注入相关文章链接')
+  console.log('   3️⃣  启动 API 服务器 (端口 3001)')
+  console.log('   4️⃣  启动 Web UI (端口 5173)\n')
+
+  // 1. 扫描内容（自动注入 frontmatter）
   await runScan()
 
   // 2. 注入相关链接

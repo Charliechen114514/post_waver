@@ -96,28 +96,98 @@ const popular = await getPopularTags(20)
 
 ## 🚀 使用方法
 
-### 方法 1：扫描时自动生成
+### 方法 1：开发环境自动注入（推荐）⭐
 
 ```bash
-# 扫描文章，自动补全缺失的 Frontmatter
-pnpm workflow:scan
+# 启动开发环境
+pnpm dev
 ```
 
-### 方法 2：手动测试
+**特性**：
+- ✅ 全自动扫描并注入
+- ✅ 只补充缺失字段
+- ✅ 不覆盖已有内容
+- ✅ 启动 Web UI 服务器
+- ✅ 适合日常开发
+
+**工作流程**：
+```
+1. 启动 pnpm dev
+2. 自动扫描 content/posts/
+3. 检测每篇文章的 Frontmatter
+4. 智能补充缺失字段
+5. 写入文件（只在有修改时）
+6. 启动服务器
+```
+
+### 方法 2：扫描时自动注入（内存中）
 
 ```bash
-# 测试自动生成功能
-npx tsx scripts/test-auto-frontmatter.ts
+# 扫描文章，在内存中自动补全缺失的 Frontmatter（不修改文件）
+pnpm scan
 ```
 
-### 方法 3：编程方式
+**说明**：默认情况下，扫描会在内存中生成完整的 Frontmatter，但不会写回文件。这用于数据库索引和内容预览。
+
+### 方法 3：智能注入模式（写回文件）
+
+```bash
+# 扫描并智能注入缺失的 Frontmatter 字段到文件
+pnpm scan --inject
+
+# 指定目录
+pnpm scan --dir content/posts --inject
+
+# 预览模式（不实际写入）
+pnpm scan --inject --dry-run
+```
+
+**智能注入特性**：
+- ✅ **只补充缺失字段**：检测文件中已有的 frontmatter，只添加缺失的部分
+- ✅ **保留原有值**：不覆盖已有的 title、tags 等字段
+- ✅ **最小化写入**：只在确实有字段被补充时才保存文件
+- ✅ **清晰日志**：显示哪些文件被修改，添加了哪些字段
+
+**示例**：
+
+**原始文件（部分 frontmatter）**：
+```yaml
+---
+title: 我已经有标题了
+tags:
+  - existing-tag
+---
+```
+
+**运行 `pnpm scan --inject` 后**：
+```yaml
+---
+title: 我已经有标题了  # ✅ 保持不变
+date: '2026-04-03T08:24:55.238Z'  # ✅ 新增
+tags:  # ✅ 保持不变
+  - existing-tag
+categories:  # ✅ 新增
+  - tech
+description: 文章描述...  # ✅ 新增
+draft: false  # ✅ 新增
+---
+```
+
+### 方法 4：编程方式
 
 ```typescript
 import { parsePost } from '@content-hub/core'
 
+// 方式 A：自动补全但不保存（默认）
 const post = await parsePost('content/posts/my-post.md', {
-  autoComplete: true,      // 启用自动补全
-  saveToFile: true         // 保存到文件
+  autoComplete: true      // 启用自动补全
+})
+
+// 方式 B：智能注入模式（只补充缺失字段）
+const post = await parsePost('content/posts/my-post.md', {
+  autoComplete: true,
+  saveToFile: true,        // 保存到文件
+  injectMode: 'missing'    // 只注入缺失字段
 })
 ```
 
@@ -272,5 +342,5 @@ console.log(`总标签数: ${stats.totalTags}, 总使用次数: ${stats.totalUsa
 
 ---
 
-**更新日期**: 2026-04-02
-**版本**: v3.1
+**更新日期**: 2026-04-03
+**版本**: v3.2
