@@ -26,7 +26,7 @@ export function getThemeCSS(themeName: string): Promise<string> {
   // 生产环境：使用base路径
   const cssPath = isDev
     ? `/themes/wechat/${themeName}.css`
-    : `/post_waver/converter/themes/wechat/${themeName}.css`
+    : `/post_waver/themes/wechat/${themeName}.css`
 
   return fetch(cssPath)
     .then(res => {
