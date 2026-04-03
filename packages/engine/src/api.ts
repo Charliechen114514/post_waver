@@ -2,7 +2,7 @@ import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { parsePost } from '@content-hub/core'
-import { transformForJuejin, transformForWechat } from '@content-hub/transformer'
+import { transformForJuejin, transformForWechat, markdownToHTML } from '@content-hub/transformer'
 import {
   loadPlatformIds,
   savePlatformIds,
@@ -129,7 +129,7 @@ export async function createAPIServer(options: {
   app.post('/api/posts/:id/preview', async (c) => {
     try {
       const { id } = c.req.param()
-      const { platform } = await c.req.json()
+      const { platform, theme } = await c.req.json()
 
       if (!['juejin', 'wechat', 'html'].includes(platform)) {
         return c.json({ error: '不支持的平台' }, 400)
@@ -162,12 +162,42 @@ export async function createAPIServer(options: {
       const parsed = await parsePost(filepath)
 
       let transformedContent: string
+      let htmlContent: string | null = null
+
       switch (platform) {
         case 'juejin':
           transformedContent = await transformForJuejin(parsed.content)
+          // 为掘金平台生成 HTML 预览（使用标准样式）
+          htmlContent = await markdownToHTML(parsed.content)
           break
         case 'wechat':
           transformedContent = await transformForWechat(parsed.content)
+          // 为微信公众号生成带主题的 HTML
+          const baseHTML = await markdownToHTML(parsed.content)
+          let themeCSS = ''
+
+          // 如果指定了主题，加载主题 CSS
+          if (theme) {
+            try {
+              const { ThemeManager } = await import('./preview/theme-manager.js')
+              const themeManager = new ThemeManager()
+              themeCSS = await themeManager.getThemeCSS('wechat', theme)
+            } catch (error) {
+              console.warn('加载主题 CSS 失败，使用默认样式:', error)
+            }
+          }
+
+          // 将 CSS 和 HTML 组合
+          htmlContent = `
+            <style>
+              ${themeCSS}
+            </style>
+            ${baseHTML}
+          `
+          break
+        case 'html':
+          transformedContent = await markdownToHTML(parsed.content)
+          htmlContent = transformedContent
           break
         default:
           transformedContent = parsed.content
@@ -176,6 +206,7 @@ export async function createAPIServer(options: {
       return c.json({
         success: true,
         content: transformedContent,
+        html: htmlContent,
         title: post.title
       })
     } catch (error) {
@@ -193,6 +224,68 @@ export async function createAPIServer(options: {
     } catch (error) {
       console.error('获取平台ID失败:', error)
       return c.json({ error: '获取平台ID失败' }, 500)
+    }
+  })
+
+  // 获取平台的可用主题列表
+  app.get('/api/themes/:platform', async (c) => {
+    try {
+      const { platform } = c.req.param()
+      const { ThemeManager } = await import('./preview/theme-manager.js')
+      const { themeConfigManager } = await import('@content-hub/config')
+
+      const themeManager = new ThemeManager()
+
+      // 获取所有可用主题
+      const themes = await themeManager.getPlatformThemes(platform)
+
+      // 获取当前设置的默认主题
+      const defaultTheme = await themeConfigManager.getPlatformDefaultTheme(platform)
+
+      return c.json({
+        success: true,
+        themes,
+        defaultTheme
+      })
+    } catch (error) {
+      console.error('获取主题列表失败:', error)
+      return c.json({ error: '获取主题列表失败', details: error instanceof Error ? error.message : String(error) }, 500)
+    }
+  })
+
+  // 设置平台的默认主题
+  app.post('/api/themes/:platform/:themeName', async (c) => {
+    try {
+      const { platform, themeName } = c.req.param()
+      const { themeConfigManager } = await import('@content-hub/config')
+
+      await themeConfigManager.setPlatformDefaultTheme(platform, themeName)
+
+      return c.json({
+        success: true,
+        message: `已将 ${themeName} 设置为 ${platform} 的默认主题`
+      })
+    } catch (error) {
+      console.error('设置主题失败:', error)
+      return c.json({ error: '设置主题失败', details: error instanceof Error ? error.message : String(error) }, 500)
+    }
+  })
+
+  // 重置平台的默认主题
+  app.delete('/api/themes/:platform', async (c) => {
+    try {
+      const { platform } = c.req.param()
+      const { themeConfigManager } = await import('@content-hub/config')
+
+      await themeConfigManager.resetPlatformDefault(platform)
+
+      return c.json({
+        success: true,
+        message: `已重置 ${platform} 的默认主题`
+      })
+    } catch (error) {
+      console.error('重置主题失败:', error)
+      return c.json({ error: '重置主题失败', details: error instanceof Error ? error.message : String(error) }, 500)
     }
   })
 
@@ -256,7 +349,263 @@ export async function createAPIServer(options: {
     }
   })
 
-  // 启动服务器
+  // ========== Workflow 相关 API ==========
+
+  // 扫描 content/posts/ 目录
+  app.post('/api/workflow/scan', async (c) => {
+    try {
+      const { WorkflowOrchestrator } = await import('./workflow/orchestrator.js')
+      const orchestrator = new WorkflowOrchestrator()
+
+      await orchestrator.scanAndInitialize()
+
+      // 获取所有文章
+      const { PostDAL } = await import('@content-hub/database')
+      const dal = new PostDAL()
+      const posts = await dal.findAll()
+
+      // 过滤出在 content/posts/ 目录下实际存在的文章
+      const { existsSync } = await import('fs')
+      const { join } = await import('path')
+
+      const postsInWorkspace = posts.filter(post => {
+        // 检查文件是否在 content/posts/ 目录下存在
+        const postsPath = join(process.cwd(), 'content/posts', `${post.postId}.md`)
+        return existsSync(postsPath)
+      })
+
+      return c.json({
+        success: true,
+        message: '扫描完成',
+        posts: postsInWorkspace.map(post => ({
+          id: post.postId,
+          title: post.title || post.postId,
+          date: post.createdAt?.toISOString() || new Date().toISOString(),
+          status: post.status,
+          workflowStatus: post.workflowStatus
+        })),
+        total: postsInWorkspace.length
+      })
+    } catch (error) {
+      console.error('扫描失败:', error)
+      return c.json({ error: '扫描失败', details: error instanceof Error ? error.message : String(error) }, 500)
+    }
+  })
+
+  // 批量发布（非阻塞）
+  app.post('/api/workflow/batch-publish', async (c) => {
+    try {
+      const { postIds, skipPreview = true } = await c.req.json()
+
+      if (!Array.isArray(postIds) || postIds.length === 0) {
+        return c.json({ error: '请选择要发布的文章' }, 400)
+      }
+
+      const { jobManager } = await import('./workflow/job-manager.js')
+      const { WorkflowOrchestrator } = await import('./workflow/orchestrator.js')
+      const orchestrator = new WorkflowOrchestrator()
+
+      // 生成批量任务 ID
+      const batchId = `batch-${Date.now()}`
+
+      // 为每篇文章创建任务
+      const jobs = postIds.map((postId: string) => {
+        const job = jobManager.createJob(postId, batchId)
+        return { postId, jobId: job.jobId }
+      })
+
+      // 后台执行任务
+      setImmediate(async () => {
+        for (const { postId, jobId } of jobs) {
+          try {
+            jobManager.updateJob(jobId, { status: 'running', stepName: '开始处理' })
+
+            await orchestrator.processPost(postId, {
+              fast: skipPreview,
+              onProgress: (step, total, stepName) => {
+                jobManager.updateJob(jobId, {
+                  currentStep: step,
+                  totalSteps: total,
+                  stepName,
+                  progress: Math.round((step / total) * 100)
+                })
+              }
+            })
+
+            jobManager.updateJob(jobId, {
+              status: 'completed',
+              stepName: '完成',
+              progress: 100
+            })
+          } catch (error: any) {
+            // 区分用户取消和真正的错误
+            const isUserCancelled = error?.name === 'USER_CANCELLED'
+
+            jobManager.updateJob(jobId, {
+              status: isUserCancelled ? 'failed' : 'failed',
+              error: isUserCancelled ? '用户取消' : error?.message || '未知错误',
+              stepName: '失败'
+            })
+
+            console.error(`Job ${jobId} failed:`, error)
+          }
+        }
+      })
+
+      return c.json({
+        success: true,
+        message: `已启动 ${jobs.length} 个发布任务`,
+        batchId,
+        jobs
+      })
+    } catch (error) {
+      console.error('批量发布失败:', error)
+      return c.json({ error: '批量发布失败', details: error instanceof Error ? error.message : String(error) }, 500)
+    }
+  })
+
+  // 查询任务状态
+  app.get('/api/workflow/job/:jobId', async (c) => {
+    try {
+      const { jobId } = c.req.param()
+      const { jobManager } = await import('./workflow/job-manager.js')
+
+      const job = jobManager.getJob(jobId)
+
+      if (!job) {
+        return c.json({ error: '任务不存在' }, 404)
+      }
+
+      return c.json({
+        success: true,
+        data: job
+      })
+    } catch (error) {
+      console.error('查询任务状态失败:', error)
+      return c.json({ error: '查询任务状态失败' }, 500)
+    }
+  })
+
+  // 查询批量任务状态
+  app.get('/api/workflow/batch/:batchId', async (c) => {
+    try {
+      const { batchId } = c.req.param()
+      const { jobManager } = await import('./workflow/job-manager.js')
+
+      const jobs = jobManager.getJobsByBatch(batchId)
+      const stats = jobManager.getStats(batchId)
+
+      return c.json({
+        success: true,
+        data: {
+          batchId,
+          jobs,
+          summary: stats
+        }
+      })
+    } catch (error) {
+      console.error('查询批量任务状态失败:', error)
+      return c.json({ error: '查询批量任务状态失败' }, 500)
+    }
+  })
+
+  // 获取处理结果
+  app.get('/api/workflow/results/:postId', async (c) => {
+    try {
+      const { postId } = c.req.param()
+      const { jobManager } = await import('./workflow/job-manager.js')
+
+      // 获取最新的任务
+      const job = jobManager.getLatestJobByPostId(postId)
+
+      if (!job) {
+        return c.json({ error: '未找到该文章的任务' }, 404)
+      }
+
+      if (job.status !== 'completed') {
+        return c.json({
+          success: true,
+          data: {
+            postId,
+            status: job.status,
+            progress: job.progress,
+            stepName: job.stepName
+          }
+        })
+      }
+
+      // 任务已完成，返回结果
+      const { PostDAL } = await import('@content-hub/database')
+      const dal = new PostDAL()
+      const post = await dal.findByPostId(postId)
+
+      if (!post) {
+        return c.json({ error: '文章不存在' }, 404)
+      }
+
+      // 读取发布页面 URL
+      const fs = await import('fs/promises')
+      const path = await import('path')
+
+      // 查找生成的发布页面
+      const outputDir = path.join(process.cwd(), 'output')
+      let publishPageUrl = null
+
+      try {
+        const files = await fs.readdir(outputDir)
+        const hashDirs = files.filter(f => !f.includes('.'))
+
+        for (const hashDir of hashDirs) {
+          const indexPath = path.join(outputDir, hashDir, 'index.html')
+          try {
+            await fs.access(indexPath)
+            // 找到发布页面，假设最新的是当前文章的
+            publishPageUrl = `/output/${hashDir}/index.html`
+            break
+          } catch {
+            // 继续查找
+          }
+        }
+      } catch {
+        // output 目录不存在
+      }
+
+      return c.json({
+        success: true,
+        data: {
+          postId,
+          status: job.status,
+          publishPageUrl,
+          title: post.title,
+          completedAt: job.completedAt
+        }
+      })
+    } catch (error) {
+      console.error('获取处理结果失败:', error)
+      return c.json({ error: '获取处理结果失败' }, 500)
+    }
+  })
+
+  // 回滚文章
+  app.post('/api/workflow/rollback/:postId', async (c) => {
+    try {
+      const { postId } = c.req.param()
+      const { WorkflowOrchestrator } = await import('./workflow/orchestrator.js')
+      const orchestrator = new WorkflowOrchestrator()
+
+      await orchestrator.rollback(postId)
+
+      return c.json({
+        success: true,
+        message: '回滚完成'
+      })
+    } catch (error) {
+      console.error('回滚失败:', error)
+      return c.json({ error: '回滚失败', details: error instanceof Error ? error.message : String(error) }, 500)
+    }
+  })
+
+  // ========== 启动服务器 ==========
   const server = serve({
     fetch: app.fetch,
     port

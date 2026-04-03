@@ -4,6 +4,8 @@ import './CopyButton.css'
 interface CopyButtonProps {
   /** 要复制的内容 */
   content: string
+  /** HTML 内容（用于富文本复制） */
+  htmlContent?: string | null
   /** 平台名称 */
   platform: string
   /** 复制成功回调 */
@@ -19,6 +21,7 @@ interface CopyButtonProps {
  */
 export function CopyButton({
   content,
+  htmlContent,
   platform: _platform,
   onSuccess,
   onError,
@@ -30,7 +33,12 @@ export function CopyButton({
   const handleCopy = async () => {
     setCopying(true)
     try {
-      await copyToClipboard(content)
+      // 如果有 HTML 内容且是微信公众号平台，使用富文本复制
+      if (htmlContent && (_platform === 'wechat' || _platform === 'html')) {
+        await copyRichTextToClipboard(htmlContent, content)
+      } else {
+        await copyToClipboard(content)
+      }
       setCopied(true)
       onSuccess?.()
 
@@ -76,5 +84,22 @@ async function copyToClipboard(content: string): Promise<void> {
     } finally {
       document.body.removeChild(textarea)
     }
+  }
+}
+
+/**
+ * 复制富文本内容到剪贴板（用于微信公众号等平台）
+ */
+async function copyRichTextToClipboard(html: string, fallbackText: string): Promise<void> {
+  if (navigator.clipboard && navigator.clipboard.write) {
+    // 使用 Clipboard API 复制富文本
+    const clipboardItem = new ClipboardItem({
+      'text/html': new Blob([html], { type: 'text/html' }),
+      'text/plain': new Blob([fallbackText], { type: 'text/plain' })
+    })
+    await navigator.clipboard.write([clipboardItem])
+  } else {
+    // 降级方案：只复制纯文本
+    await copyToClipboard(fallbackText)
   }
 }

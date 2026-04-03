@@ -2,13 +2,16 @@ import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { readFile } from 'fs/promises'
-import { join, dirname } from 'path'
+import { join } from 'path'
 import { fileURLToPath } from 'url'
 import { marked } from 'marked'
 import { markedHighlight } from 'marked-highlight'
 import hljs from 'highlight.js'
 import { themeManager } from './theme-manager.js'
 import { ThemeConfigManager } from '@content-hub/config'
+
+// 获取当前文件的目录路径
+const __dirname = join(fileURLToPath(import.meta.url), '..')
 
 // 创建主题配置管理器实例
 const themeConfigManager = new ThemeConfigManager()
@@ -95,6 +98,24 @@ export async function createPreviewServer(getPreviewContent: (id: string, platfo
   // 健康检查端点
   app.get('/health', (c) => {
     return c.json({ status: 'ok', timestamp: new Date().toISOString() })
+  })
+
+  // 静态文件服务 - KaTeX 基础样式
+  app.get('/katex-base.css', async (c) => {
+    try {
+      const cssPath = join(__dirname, 'styles', 'katex-base.css')
+      const cssContent = await readFile(cssPath, 'utf-8')
+
+      return new Response(cssContent, {
+        headers: {
+          'Content-Type': 'text/css; charset=utf-8',
+          'Cache-Control': 'public, max-age=3600'
+        }
+      })
+    } catch (error) {
+      console.error('❌ KaTeX 基础样式读取失败:', error)
+      return c.text('KaTeX 基础样式文件未找到', 404)
+    }
   })
 
   // 静态文件服务 - 提供图片等资源文件
@@ -454,6 +475,68 @@ function generatePreviewHTML(content: PreviewContent): string {
     /* Highlight.js 主题样式 - GitHub Dark (用于代码块) */
     @import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css');
 
+    /* KaTeX 样式 - 使用统一的基础样式文件 */
+    @import url('/katex-base.css');
+    @import url('https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css');
+
+    /* KaTeX 多行公式标号对齐支持 - 修复标号挤在一起的问题 */
+    /* 确保多行公式的表格结构正确显示 */
+    .katex .mtable {
+      display: inline-table !important;
+      table-layout: auto !important;
+      vertical-align: middle !important;
+    }
+
+    .katex .mtr {
+      display: table-row !important;
+    }
+
+    .katex .mtd {
+      display: table-cell !important;
+      text-align: center !important;
+      padding: 0.15em 0.3em !important;
+    }
+
+    /* 每行公式右对齐，标号在最右侧 */
+    .katex .mtr .mtd:first-child {
+      text-align: right !important;
+    }
+
+    /* 等号列居中对齐 */
+    .katex .mtr .mtd:nth-child(2) {
+      text-align: center !important;
+    }
+
+    /* 公式右侧部分左对齐 */
+    .katex .mtr .mtd:nth-child(3) {
+      text-align: left !important;
+    }
+
+    /* 标号列左对齐，确保逐行分布 */
+    .katex .mtr .mtd:last-child {
+      text-align: left !important;
+      padding-left: 1em !important;
+      min-width: 2.5em !important;
+    }
+
+    /* 支持 KaTeX 的 \tag{} 命令样式 */
+    .katex .tag {
+      position: relative !important;
+      display: inline-block !important;
+      margin-left: 1em !important;
+      font-size: 0.9em !important;
+    }
+
+    /* 确保 tag 在多行公式中正确对齐 */
+    .katex-display > .katex > .katex-html > .base {
+      position: relative !important;
+    }
+
+    .katex .mtr .mtd .tag {
+      position: static !important;
+      margin-left: 0.5em !important;
+    }
+
     /* 主题CSS将动态加载 */
     #theme-css { /* 主题CSS链接 */ }
 
@@ -577,6 +660,18 @@ function generatePreviewHTML(content: PreviewContent): string {
       background: white;
       overflow-x: auto;
     }
+    /* 确保主题CSS不被预览页面样式覆盖 */
+    .panel-right .content.markdown-body {
+      background: transparent;
+      padding: 32px;
+    }
+    /* 重置表格样式，让主题CSS完全控制 */
+    .panel-right .content.markdown-body table {
+      margin: initial;
+      padding: initial;
+      border: initial;
+      background: initial;
+    }
     .actions {
       padding: 24px 32px;
       background: #f9f9f9;
@@ -670,6 +765,8 @@ function generatePreviewHTML(content: PreviewContent): string {
       document.querySelectorAll('pre code').forEach((block) => {
         hljs.highlightElement(block);
       });
+
+      // 数学公式已经在服务端用 KaTeX 渲染，不需要客户端再次渲染
 
       // 初始化主题系统
       initThemeSystem();

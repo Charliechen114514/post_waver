@@ -123,15 +123,30 @@ export class PostDAL {
   /**
    * 标记为完成
    */
-  async markAsDone(postId: string, donePath: string): Promise<void> {
+  async markAsDone(postId: string, donePath: string, assetsMoved: boolean = false): Promise<void> {
     await prisma.post.update({
       where: { postId },
       data: {
         workflowStatus: 'done',
         workflowLocation: 'done',
         currentPath: donePath,
+        assetsMoved,
         processedAt: new Date(),
         movedAt: new Date()
+      }
+    })
+  }
+
+  /**
+   * 更新当前路径
+   */
+  async updateCurrentPath(postId: string, currentPath: string, resetAssets: boolean = false): Promise<void> {
+    await prisma.post.update({
+      where: { postId },
+      data: {
+        currentPath,
+        workflowLocation: currentPath.includes('content/done') ? 'done' : 'posts',
+        ...(resetAssets ? { assetsMoved: false } : {})
       }
     })
   }

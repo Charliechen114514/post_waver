@@ -57,10 +57,7 @@ export async function transformForWechat(
     .replace(/<p><code/g, '<p><code style="background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco, "Andale Mono", monospace; color: #d63384; font-size: 14px;"')
     // 引用样式
     .replace(/<blockquote>/g, '<blockquote style="border-left: 4px solid #ddd; padding: 10px 20px; margin: 20px 0; color: #666; background: #f9f9f9;">')
-    // 表格样式
-    .replace(/<table>/g, '<table style="width: 100%; border-collapse: collapse; margin: 20px 0;">')
-    .replace(/<th>/g, '<th style="border: 1px solid #ddd; padding: 12px; background: #f4f4f4; font-weight: bold; text-align: left;">')
-    .replace(/<td>/g, '<td style="border: 1px solid #ddd; padding: 12px;">')
+    // 表格样式（不添加内联样式，让CSS主题控制）
     // 链接样式
     .replace(/<a /g, '<a style="color: #007bff; text-decoration: underline;" ')
     // 图片样式

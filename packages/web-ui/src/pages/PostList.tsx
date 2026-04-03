@@ -51,8 +51,13 @@ export default function PostList() {
   return (
     <div className="post-list">
       <div className="page-header">
-        <h2>文章列表</h2>
-        <p className="post-count">共 {posts.length} 篇文章</p>
+        <div>
+          <h2>文章列表</h2>
+          <p className="post-count">共 {posts.length} 篇文章</p>
+        </div>
+        <Link to="/publish" className="btn btn-primary">
+          🚀 发布工作台
+        </Link>
       </div>
 
       {posts.length === 0 ? (

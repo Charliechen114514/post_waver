@@ -20,28 +20,39 @@ export class WorkflowOrchestrator {
   /**
    * 处理单个文章
    */
-  async processPost(postId: string, options: { fast?: boolean } = {}): Promise<void> {
+  async processPost(
+    postId: string,
+    options: {
+      fast?: boolean
+      onProgress?: (step: number, total: number, stepName: string) => void
+    } = {}
+  ): Promise<void> {
     console.log(`\n🔄 开始处理: ${postId}`)
+
+    const { fast = false, onProgress } = options
 
     try {
       // 1. 标记为处理中
       console.log(`\n📊 1/5 更新状态...`)
+      onProgress?.(1, 5, '更新状态')
       await this.statusManager.markAsProcessing(postId)
       console.log(`   ✅ 状态已更新: processing`)
 
       // 2. 预览确认（fast 模式跳过）
-      if (!options.fast) {
+      if (!fast) {
         console.log(`\n👀 2/5 预览确认...`)
+        onProgress?.(2, 5, '预览确认')
         await this.previewAndConfirm(postId)
       } else {
         console.log(`\n⏭️  2/5 跳过预览确认（fast 模式）`)
+        onProgress?.(2, 5, '跳过预览确认')
       }
 
       // 3. 确保文章状态为previewing（满足发布流程的要求）
       try {
         await StatusTransitionService.transition(postId, 'previewing')
         console.log(`   ✅ 文章状态已设置为: previewing`)
-      } catch (error) {
+      } catch (error: any) {
         // 如果状态转换失败，继续尝试发布
         if (!error.message.includes('Cannot transition')) {
           throw error
@@ -50,21 +61,23 @@ export class WorkflowOrchestrator {
 
       // 4. 生成平台产物（FullPublishPipeline 内部会处理文件移动）
       console.log(`\n📝 4/5 生成平台产物...`)
+      onProgress?.(4, 5, '生成平台产物')
       const result = await this.publishPipeline.publish(postId, {
         skipSync: false,
         skipPageGen: false,
-        openBrowser: options.fast,  // fast 模式下打开浏览器
+        openBrowser: fast,  // fast 模式下打开浏览器
         mode: 'fast'
       })
 
       if (!result.success) {
         // 找到失败的步骤
-        const failedStep = result.steps.find(s => s.status === 'failed')
+        const failedStep = result.steps.find((s: any) => s.status === 'failed')
         throw new Error(failedStep?.error || '发布失败')
       }
 
       // 5. 标记为完成
       console.log(`\n✅ 5/5 更新状态...`)
+      onProgress?.(5, 5, '完成')
       // FullPublishPipeline 已经处理了文件移动和状态更新，这里只需要记录完成
       console.log(`   ✅ 处理完成: ${postId}`)
 
@@ -137,7 +150,8 @@ export class WorkflowOrchestrator {
             break
           case 'wechat':
             transformedContent = await transformForWechat(rawContent)
-            htmlContent = await markdownToHTML(transformedContent)
+            // transformForWechat 已经返回HTML，不需要再次转换
+            htmlContent = transformedContent
             break
           case 'html':
             transformedContent = await markdownToHTML(rawContent)

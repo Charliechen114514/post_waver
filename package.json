@@ -6,8 +6,9 @@
   "scripts": {
     "db:migrate": "npx tsx scripts/migrate-json-to-db.ts",
     "dev": "tsx scripts/dev.ts",
+    "dev:safe": "bash scripts/dev-safe.sh",
     "dev:web": "pnpm --filter web-ui dev",
-    "dev:api": "tsx scripts/api-server.ts",
+    "dev:api": "bash scripts/start-api-safe.sh",
     "build": "pnpm -r --workspace-concurrency=1 run build",
     "lint": "pnpm lint:md && pnpm lint:ts",
     "lint:md": "markdownlint-cli2 '**/*.md'",
@@ -45,7 +46,6 @@
     "test:workflow:act": "act -j deploy -n",
     "preview:prod": "pnpm --filter @content-hub/web-ui preview --host 0.0.0.0 --port 4173",
     "db:init": "prisma generate",
-    "db:migrate": "npx tsx scripts/migrate-json-to-db.ts",
     "db:migrate:prisma": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",

@@ -49,8 +49,10 @@ export class FileMover {
 
     // 5. 移动资源文件
     let assetMapping: Record<string, string> = {}
+    let hasAssets = false
     if (moveAssets) {
       assetMapping = await this.moveAssets(postId, sourcePath)
+      hasAssets = Object.keys(assetMapping).length > 0
     }
 
     // 6. 更新文件内的相对路径引用
@@ -62,6 +64,17 @@ export class FileMover {
     await fs.rename(sourcePath, targetPath)
 
     console.log(`✅ 文件已移动: ${sourcePath} → ${targetPath}`)
+
+    // 8. 更新数据库中的路径信息
+    try {
+      const { PostDAL } = await import('@content-hub/database')
+      const dal = new PostDAL()
+      await dal.markAsDone(postId, targetPath, hasAssets)
+      console.log(`✅ 数据库已更新: ${postId} -> ${targetPath} (assets: ${hasAssets})`)
+    } catch (error) {
+      console.warn(`⚠️  更新数据库失败:`, error)
+      // 不抛出错误，文件已经成功移动
+    }
 
     return targetPath
   }
@@ -182,6 +195,18 @@ export class FileMover {
     await fs.rename(sourcePath, targetPath)
 
     console.log(`✅ 文件已回滚: ${sourcePath} → ${targetPath}`)
+
+    // 更新数据库中的路径信息
+    try {
+      const { PostDAL } = await import('@content-hub/database')
+      const dal = new PostDAL()
+      await dal.updateCurrentPath(postId, targetPath, true) // reset assets moved flag
+      await dal.updateWorkflowStatus(postId, 'pending')
+      console.log(`✅ 数据库已更新: ${postId} -> ${targetPath}`)
+    } catch (error) {
+      console.warn(`⚠️  更新数据库失败:`, error)
+      // 不抛出错误，文件已经成功移动
+    }
 
     return targetPath
   }

@@ -1,0 +1,191 @@
+/*
+ * Typora Theme - Lapis / Author - YiNN
+ * https://github.com/YiNN-Hot typora-theme-lapis
+ */
+.markdown-body {
+--light-bg: #e6e6e6;
+--light-text: #5d6d7e;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+line-height: 1.75;
+color: #2c3e50;
+font-size: 16px;
+}
+.markdown-body p,
+.markdown-body pre {
+margin: 1em 0;
+}
+.markdown-body p {
+color: #2c3e50;
+}
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+margin: 1.2em 0 1em;
+padding: 0px;
+font-weight: bold;
+color: #2c3e50;
+}
+.markdown-body h1 {
+text-align: center;
+border-bottom: 2px solid #2c3e50;
+font-size: 1.5em;
+}
+.markdown-body h1::after {
+content: "";
+display: block;
+width: 100px;
+height: 2px;
+background-color: #2c3e50;
+margin: 10px auto;
+}
+.markdown-body h2 {
+font-size: 1.3em;
+padding-left: 10px;
+border-left: 5px solid #2c3e50;
+background-color: var(--light-bg);
+padding-top: 5px;
+padding-bottom: 5px;
+}
+.markdown-body h3 {
+font-size: 1.2em;
+text-decoration: underline;
+text-decoration-color: #2c3e50;
+text-decoration-thickness: 2px;
+}
+.markdown-body h4 {
+font-size: 1.1em;
+border-bottom: 1px dashed #2c3e50;
+padding-bottom: 3px;
+}
+.markdown-body h5 {
+font-size: 1.1em;
+}
+.markdown-body h6 {
+font-size: 1em;
+color: var(--light-text);
+}
+.markdown-body ul,
+.markdown-body ol {
+margin-top: 8px;
+margin-bottom: 8px;
+padding-left: 25px;
+}
+.markdown-body ul {
+list-style-type: disc;
+}
+.markdown-body ul ul {
+list-style-type: circle;
+}
+.markdown-body ol {
+list-style-type: decimal;
+}
+.markdown-body blockquote {
+margin: 0;
+border-left: 4px solid #2c3e50;
+padding: 10px 20px;
+background-color: var(--light-bg);
+color: var(--light-text);
+}
+.markdown-body blockquote p {
+margin: 0;
+}
+.markdown-body a {
+color: #2c3e50;
+text-decoration: underline;
+font-weight: 600;
+}
+.markdown-body p code {
+font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+background-color: var(--light-bg);
+padding: 2px 6px;
+border-radius: 4px;
+font-size: 0.9em;
+color: #2c3e50;
+}
+.markdown-body pre {
+background-color: #2c3e50;
+color: #ecf0f1;
+padding: 15px;
+border-radius: 5px;
+overflow-x: auto;
+}
+.markdown-body pre code {
+font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+color: #ecf0f1;
+background-color: transparent;
+padding: 0;
+}
+.markdown-body img {
+max-width: 100%;
+height: auto;
+display: block;
+margin: 20px auto;
+border-radius: 5px;
+box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+.markdown-body table {
+border-collapse: collapse;
+margin: 20px auto;
+max-width: 100%;
+box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.markdown-body table th,
+.markdown-body table td {
+border: 1px solid #2c3e50;
+padding: 12px 15px;
+text-align: left;
+}
+.markdown-body table th {
+background-color: #2c3e50;
+color: #ecf0f1;
+font-weight: bold;
+}
+.markdown-body table tr:nth-child(even) {
+background-color: var(--light-bg);
+}
+.markdown-body hr {
+border: none;
+border-top: 2px solid #2c3e50;
+margin: 30px 0;
+}
+.markdown-body strong {
+color: #2c3e50;
+font-weight: bold;
+}
+.markdown-body em {
+font-style: italic;
+color: var(--light-text);
+}
+.markdown-body .footnote {
+color: #2c3e50;
+font-size: 0.9em;
+}
+.markdown-body #footnotes {
+border-top: 1px solid #2c3e50;
+padding-top: 20px;
+margin-top: 30px;
+}
+.markdown-body #footnotes p {
+display: flex;
+margin: 0;
+font-size: 0.9em;
+}
+.markdown-body .footnote-num {
+display: inline;
+width: 10%;
+}
+.markdown-body .footnote-txt {
+display: inline;
+width: 90%;
+}
+
+
+/*
+ * KaTeX 数学公式样式
+ * 统一使用基础样式文件，避免重复定义
+ * 基础样式已包含：显示样式、多行对齐、标号支持
+ */
+@import url('../../../styles/katex-base.css');

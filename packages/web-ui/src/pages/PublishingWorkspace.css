@@ -1,0 +1,184 @@
+.publishing-workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f9fafb;
+}
+
+/* 顶部操作栏 */
+.top-bar {
+  padding: 16px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.top-bar h1 {
+  margin: 0;
+  font-size: 20px;
+  color: #111827;
+}
+
+.actions {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.summary {
+  padding: 8px 16px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+}
+
+/* Tab 栏 */
+.tab-bar {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: white;
+  overflow-x: auto;
+}
+
+.tab {
+  padding: 8px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px 6px 0 0;
+  background: #f9fafb;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  background: #f3f4f6;
+}
+
+.tab.active {
+  background: white;
+  border-bottom-color: white;
+  color: #667eea;
+  font-weight: 500;
+}
+
+.tab-title {
+  flex: 1;
+}
+
+.status-badge {
+  font-size: 12px;
+}
+
+.status-badge.pending {
+  color: #f59e0b;
+}
+
+.status-badge.running {
+  animation: spin 1s linear infinite;
+}
+
+.status-badge.completed {
+  color: #10b981;
+}
+
+.status-badge.failed {
+  color: #ef4444;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Tab 内容 */
+.tab-content {
+  flex: 1;
+  overflow: auto;
+  padding: 24px;
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+/* 完成横幅 */
+.completion-banner {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: white;
+  border: 2px solid #10b981;
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.completion-banner h2 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  color: #10b981;
+}
+
+.completion-banner p {
+  margin: 0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* 按钮样式 */
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb;
+}

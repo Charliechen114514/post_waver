@@ -26,7 +26,7 @@ export interface ThemePreferences {
  */
 const DEFAULT_THEME_PREFERENCES: ThemePreferences = {
   platformDefaults: {
-    wechat: 'fresh',
+    wechat: 'orangeheart',
     juejin: 'default',
     html: 'default'
   },

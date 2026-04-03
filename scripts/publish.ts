@@ -184,7 +184,8 @@ async function main() {
                 break
               case 'wechat':
                 transformedContent = await transformForWechat(rawContent)
-                htmlContent = await markdownToHTML(transformedContent)
+                // transformForWechat 已经返回HTML，不需要再次转换
+                htmlContent = transformedContent
                 break
               case 'html':
                 transformedContent = await markdownToHTML(rawContent)

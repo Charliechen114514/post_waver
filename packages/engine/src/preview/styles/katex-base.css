@@ -1,0 +1,114 @@
+/**
+ * KaTeX 数学公式基础样式
+ *
+ * 这个文件包含了 KaTeX 渲染所需的所有基础 CSS 样式
+ * 包括：
+ * - 标准的 KaTeX 显示样式
+ * - 多行公式对齐支持
+ * - 标号（tag）支持
+ *
+ * 使用方法：
+ * 1. 在 HTML 中通过 <link> 标签引入
+ * 2. 在其他 CSS 中通过 @import 引入
+ * 3. 通过构建工具合并到最终的 CSS 中
+ */
+
+/* KaTeX CDN 样式导入（可选，如果需要本地部署可下载） */
+@import url('https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css');
+
+/* ========== 基础显示样式 ========== */
+
+/* 隐藏 MathML 版本，只显示 HTML/CSS 版本 */
+.katex-mathml {
+  display: none !important;
+}
+
+/* 确保 HTML/CSS 版本正确显示 */
+.katex-html {
+  display: inline-block !important;
+}
+
+/* 块级公式容器样式 */
+.katex-display {
+  margin: 20px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* ========== 多行公式对齐支持 ========== */
+
+/*
+ * KaTeX 的 align/aligned 环境使用内部表格结构来实现多行对齐
+ * .mtable - 表格容器
+ * .mtr - 表格行
+ * .mtd - 表格单元格
+ */
+
+/* 确保多行公式的表格结构正确显示 */
+.katex .mtable {
+  display: inline-table !important;
+  table-layout: auto !important;
+  vertical-align: middle !important;
+}
+
+/* 表格行 */
+.katex .mtr {
+  display: table-row !important;
+}
+
+/* 表格单元格 */
+.katex .mtd {
+  display: table-cell !important;
+  text-align: center !important;
+  padding: 0.15em 0.3em !important;
+}
+
+/* 每行公式左对齐（等号前的部分） */
+.katex .mtr .mtd:first-child {
+  text-align: right !important;
+}
+
+/* 等号列居中对齐 */
+.katex .mtr .mtd:nth-child(2) {
+  text-align: center !important;
+}
+
+/* 公式右侧部分（等号后的部分）左对齐 */
+.katex .mtr .mtd:nth-child(3) {
+  text-align: left !important;
+}
+
+/* ========== 标号支持 ========== */
+
+/*
+ * 支持 KaTeX 的 \tag{} 命令
+ * 用于手动添加公式标号，例如：\tag{1}、\tag{2} 等
+ */
+
+/* 标号基础样式 */
+.katex .tag {
+  position: relative !important;
+  display: inline-block !important;
+  margin-left: 1em !important;
+  font-size: 0.9em !important;
+}
+
+/* 在多行公式的表格单元格中，标号需要特殊处理 */
+.katex .mtr .mtd .tag {
+  position: static !important;
+  margin-left: 0.5em !important;
+}
+
+/* 确保标号列有足够空间 */
+.katex .mtr .mtd:last-child {
+  text-align: left !important;
+  padding-left: 1em !important;
+  min-width: 2.5em !important;
+}
+
+/* ========== 兼容性修复 ========== */
+
+/* 确保在 display 模式下的正确布局 */
+.katex-display > .katex > .katex-html > .base {
+  position: relative !important;
+}

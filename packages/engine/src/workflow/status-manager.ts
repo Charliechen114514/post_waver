@@ -57,8 +57,8 @@ export class WorkflowStatusManager {
   /**
    * 标记为完成
    */
-  async markAsDone(postId: string, donePath: string): Promise<void> {
-    await this.postDAL.markAsDone(postId, donePath)
+  async markAsDone(postId: string, donePath: string, assetsMoved: boolean = false): Promise<void> {
+    await this.postDAL.markAsDone(postId, donePath, assetsMoved)
   }
 
   /**

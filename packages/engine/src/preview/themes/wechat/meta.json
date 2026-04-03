@@ -1,22 +1,64 @@
 {
-  "default": "simple",
+  "default": "orangeheart",
   "themes": [
     {
+      "name": "orangeheart",
+      "displayName": "Orange Heart",
+      "description": "温暖橙心主题，充满活力的优雅设计，温暖的橙色调。作者：evgo2017",
+      "cssFile": "orangeheart.css"
+    },
+    {
+      "name": "rainbow",
+      "displayName": "Rainbow",
+      "description": "彩虹渐变主题，多彩活泼，干净的布局。作者：thezbm",
+      "cssFile": "rainbow.css"
+    },
+    {
+      "name": "lapis",
+      "displayName": "Lapis",
+      "description": "青金石主题，极简清新的冷蓝色调。作者：YiNN",
+      "cssFile": "lapis.css"
+    },
+    {
+      "name": "pie",
+      "displayName": "Pie",
+      "description": "优雅派主题，现代、锐利、时尚。作者：kevinzhao2233",
+      "cssFile": "pie.css"
+    },
+    {
+      "name": "maize",
+      "displayName": "Maize",
+      "description": "清新明亮的主题，柔和的玉米黄色调。作者：BEATREE",
+      "cssFile": "maize.css"
+    },
+    {
+      "name": "purple",
+      "displayName": "Purple",
+      "description": "紫色主题，简洁极简，微妙的紫色强调。作者：hliu202",
+      "cssFile": "purple.css"
+    },
+    {
+      "name": "phycat",
+      "displayName": "物理猫-薄荷",
+      "description": "物理猫薄荷主题，薄荷绿搭配清晰的结构层次。作者：sumruler",
+      "cssFile": "phycat.css"
+    },
+    {
       "name": "simple",
-      "displayName": "简约风格",
-      "description": "极简设计，适合技术文章。17px字号，1.6行高，舒适的阅读体验。",
+      "displayName": "Simple",
+      "description": "简约主题，干净利落的设计风格。",
       "cssFile": "simple.css"
     },
     {
       "name": "fresh",
-      "displayName": "清新风格",
-      "description": "明亮色彩，适合生活分享。更大行间距，圆润的视觉风格。",
+      "displayName": "Fresh",
+      "description": "清新主题，明亮舒适的视觉体验。",
       "cssFile": "fresh.css"
     },
     {
       "name": "business",
-      "displayName": "商务风格",
-      "description": "专业稳重，适合商业内容。深色调，衬线字体标题，更紧凑的排版。",
+      "displayName": "Business",
+      "description": "商务主题，专业正式的商务风格。",
       "cssFile": "business.css"
     }
   ]

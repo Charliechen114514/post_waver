@@ -187,3 +187,11 @@
   font-style: italic;
   color: #555;
 }
+
+
+/*
+ * KaTeX 数学公式样式
+ * 统一使用基础样式文件，避免重复定义
+ * 基础样式已包含：显示样式、多行对齐、标号支持
+ */
+@import url('../../../styles/katex-base.css');
