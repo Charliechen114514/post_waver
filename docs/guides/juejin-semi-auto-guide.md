@@ -452,7 +452,7 @@ $E = mc^2$
 ### 官方文档
 
 - **ByteMD GitHub**: https://github.com/bytedance/bytemd
-- **掘金编辑器**: https://juejin.cn/editor
+- **掘金编辑器**: https://juejin.cn/editor/drafts/new
 - **KaTeX文档**: https://katex.org/docs/supported.html
 - **Mermaid文档**: https://mermaid-js.github.io/
 

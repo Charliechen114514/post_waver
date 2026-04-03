@@ -1,6 +1,5 @@
 import axios from 'axios'
-import { writeFileSync, readFileSync, existsSync, mkdirSync, createReadStream } from 'fs'
-import { join } from 'path'
+import { existsSync, createReadStream } from 'fs'
 import FormData from 'form-data'
 import { ConfigService } from '@content-hub/database'
 
@@ -11,7 +10,6 @@ export interface WechatConfig {
   appId: string
   appSecret: string
   apiBaseUrl: string
-  tokenCachePath?: string  // 可选，用于向后兼容
 }
 
 /**
@@ -22,15 +20,6 @@ export interface UploadResult {
   mediaId?: string
   url?: string
   error?: string
-}
-
-/**
- * Access Token 缓存
- */
-interface TokenCache {
-  token: string
-  expiresAt: number
-  updatedAt: number
 }
 
 /**
@@ -305,7 +294,7 @@ export class WechatClient {
   }
 
   /**
-   * 保存 Access Token（到数据库）
+   * 保存 Access Token
    */
   private async saveAccessToken(token: string, expiresAt: number): Promise<void> {
     const updatedAt = Date.now()
@@ -316,22 +305,6 @@ export class WechatClient {
       await ConfigService.set('wechatToken', 'updatedAt', updatedAt.toString())
     } catch (error) {
       console.error('保存 token 到数据库失败:', error)
-    }
-
-    // 同时保存到文件作为备份（如果配置了路径）
-    if (this.config.tokenCachePath) {
-      const cache: TokenCache = {
-        token,
-        expiresAt,
-        updatedAt
-      }
-
-      const dir = join(this.config.tokenCachePath, '..')
-      if (!existsSync(dir)) {
-        mkdirSync(dir, { recursive: true })
-      }
-
-      writeFileSync(this.config.tokenCachePath, JSON.stringify(cache, null, 2))
     }
   }
 

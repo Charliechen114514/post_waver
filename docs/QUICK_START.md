@@ -145,7 +145,7 @@ pnpm workflow:process my-first-post
 
 1. **掘金平台**
    - 点击"复制掘金内容"
-   - 访问 [掘金写作平台](https://juejin.cn/editor)
+   - 访问 [掘金写作平台](https://juejin.cn/editor/drafts/new)
    - 粘贴内容并发布
 
 2. **微信公众号**

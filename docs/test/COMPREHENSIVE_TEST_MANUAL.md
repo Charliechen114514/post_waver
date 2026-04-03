@@ -34,10 +34,7 @@ rm -f packages/database/prisma/dev.db-journal
 # 4. 清空索引文件
 rm -f content-index.json
 
-# 5. 清空平台 ID 映射
-rm -f .post-waver/platform-ids.json
-
-# 6. 清空输出目录
+# 5. 清空输出目录
 rm -rf output/*
 
 # 7. 设置环境变量（如果 .env 文件不存在）

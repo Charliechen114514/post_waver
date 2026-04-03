@@ -1,6 +1,5 @@
 import { ImageUploadConfigManager } from '@content-hub/config'
 import { WechatClient } from '@content-hub/engine'
-import { join } from 'path'
 
 async function main() {
   const args = process.argv.slice(2)
@@ -37,7 +36,7 @@ async function main() {
 
     console.log('✅ 微信配置已保存')
     console.log(`   AppID: ${appId}`)
-    console.log(`   配置文件: .post-waver/image-upload-config.json`)
+    console.log(`   存储位置: 数据库 (Config 表)`)
 
   } else if (command === 'test-wechat') {
     // 测试微信连接
@@ -55,8 +54,7 @@ async function main() {
     const client = new WechatClient({
       appId: wechatConfig.appId,
       appSecret: wechatConfig.appSecret,
-      apiBaseUrl: 'https://api.weixin.qq.com/cgi-bin',
-      tokenCachePath: join(process.cwd(), '.post-waver/wechat-token.json')
+      apiBaseUrl: 'https://api.weixin.qq.com/cgi-bin'
     })
 
     try {

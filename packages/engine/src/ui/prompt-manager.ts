@@ -165,7 +165,7 @@ export class PromptManager {
     console.log('│     在打开的浏览器中点击"复制内容"按钮              │')
     console.log('│                                                     │')
     console.log('│  2. 🚀 发布到各平台                                  │')
-    console.log('│     掘金: https://juejin.cn/editor/new             │')
+    console.log('│     掘金: https://juejin.cn/editor/drafts/new/new             │')
     console.log('│     微信: https://mp.weixin.qq.com/                 │')
     console.log('│                                                     │')
     console.log('│  3. 🔗 设置平台 URL                                  │')

@@ -301,8 +301,9 @@ ls -la content/assets/images/
 # 本地图片：/assets/images/filename.png
 # 外部图片：https://example.com/image.png
 
-# 4. 迁移图片到正确位置
-pnpm migrate-images
+# 4. 手动移动图片到正确位置
+mkdir -p content/assets/images
+cp <source-path> content/assets/images/
 ```
 
 ---

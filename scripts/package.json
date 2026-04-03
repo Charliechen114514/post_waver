@@ -4,8 +4,7 @@
   "type": "module",
   "bin": {
     "scan": "./scan.js",
-    "sync-hexo": "./sync-to-hexo.js",
-    "migrate-images": "./migrate-images.js"
+    "sync-hexo": "./sync-to-hexo.js"
   },
   "dependencies": {
     "@content-hub/core": "workspace:*",

@@ -4,7 +4,6 @@
   "private": true,
   "description": "本地优先的内容管理系统",
   "scripts": {
-    "db:migrate": "npx tsx scripts/migrate-json-to-db.ts",
     "dev": "tsx scripts/dev.ts",
     "dev:safe": "bash scripts/dev-safe.sh",
     "dev:web": "pnpm --filter web-ui dev",
@@ -27,9 +26,7 @@
     "index:rebuild": "npx tsx scripts/scan.ts --dir content/posts --include-drafts",
     "sync:hexo": "npx tsx scripts/sync-to-hexo.ts",
     "sync:blog": "bash scripts/update-blog.sh",
-    "migrate-images": "tsx scripts/migrate-images.ts",
     "python:install": "cd packages/linker && pip3 install -r requirements.txt",
-    "test:migrate-images": "bash test/scripts/test-migrate-images.sh",
     "transform:html": "tsx scripts/transform.ts html",
     "transform:wechat": "tsx scripts/transform.ts wechat",
     "transform:juejin": "tsx scripts/transform.ts juejin",

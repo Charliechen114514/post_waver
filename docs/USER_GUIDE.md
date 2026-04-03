@@ -312,7 +312,7 @@ pnpm post:publish:generate <postId>
    - 或复制 `output/{hashId}/{postId}-juejin.txt`
 
 3. **发布到掘金**
-   - 访问 [掘金写作平台](https://juejin.cn/editor)
+   - 访问 [掘金写作平台](https://juejin.cn/editor/drafts/new)
    - 粘贴内容
    - 检查格式
    - 发布

@@ -1,4 +1,3 @@
-import { join } from 'path'
 import { existsSync } from 'fs'
 import { WechatClient } from './wechat-client.js'
 import { ImageUploadConfigManager } from '@content-hub/config'
@@ -149,8 +148,7 @@ export class ImageUploadManager {
       this.wechatClient = new WechatClient({
         appId: wechatConfig.appId,
         appSecret: wechatConfig.appSecret,
-        apiBaseUrl: 'https://api.weixin.qq.com/cgi-bin',
-        tokenCachePath: join(process.cwd(), '.post-waver/wechat-token.json')
+        apiBaseUrl: 'https://api.weixin.qq.com/cgi-bin'
       })
       console.log(`  ✅ 微信客户端初始化完成`)
     }

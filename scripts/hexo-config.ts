@@ -9,7 +9,7 @@ async function main() {
   switch (action) {
     case 'setup': {
       console.log('\n🔧 Hexo 同步配置向导\n')
-      console.log('💡 配置文件位置: .post-waver/hexo-config.json')
+      console.log('💡 配置存储位置: 数据库 (Config 表)')
 
       const currentConfig = config.getAll()
       console.log('\n📋 当前配置:')

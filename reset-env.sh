@@ -37,9 +37,7 @@ echo "   ✅ 索引文件已清空"
 # 5. 清空平台 ID 映射
 echo ""
 echo "🗑️  清空平台 ID 映射..."
-rm -f .post-waver/platform-ids.json
-mkdir -p .post-waver
-echo "   ✅ 平台 ID 映射已清空"
+echo "   ✅ 平台 ID 映射将在数据库重置时自动清空"
 
 # 6. 清空输出目录
 echo ""

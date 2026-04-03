@@ -344,14 +344,14 @@ export function GridLayout({ postId, job }: GridLayoutProps) {
               type="text"
               value={newUrl}
               onChange={e => setNewUrl(e.target.value)}
-              placeholder="例如: https://juejin.cn/editor"
+              placeholder="例如: https://juejin.cn/editor/drafts/new"
               className="url-input"
             />
             {/* 常用 URL 快捷按钮 */}
             <div className="url-presets">
               <span className="preset-label">快捷选择：</span>
               {editingPlatform === 'juejin' && (
-                <button className="btn-preset" onClick={() => setNewUrl('https://juejin.cn/editor')}>
+                <button className="btn-preset" onClick={() => setNewUrl('https://juejin.cn/editor/drafts/new')}>
                   掘金编辑器
                 </button>
               )}
@@ -362,7 +362,7 @@ export function GridLayout({ postId, job }: GridLayoutProps) {
               )}
               {editingPlatform === 'html' && (
                 <>
-                  <button className="btn-preset" onClick={() => setNewUrl('https://juejin.cn/editor')}>
+                  <button className="btn-preset" onClick={() => setNewUrl('https://juejin.cn/editor/drafts/new')}>
                     掘金
                   </button>
                   <button className="btn-preset" onClick={() => setNewUrl('https://zhuanlan.zhihu.com/write')}>

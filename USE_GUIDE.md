@@ -169,7 +169,7 @@ output/
    - 粘贴到目标平台编辑器
 
 3. **平台发布**
-   - **掘金**：访问 https://juejin.cn/editor 粘贴内容
+   - **掘金**：访问 https://juejin.cn/editor/drafts/new 粘贴内容
    - **微信公众号**：登录后台，新建图文，粘贴内容
    - **Hexo 博客**：自动同步（如配置）
 
