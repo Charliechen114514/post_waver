@@ -4,6 +4,10 @@
 # 自动处理端口占用问题
 
 PORT=3001
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+cd "$PROJECT_ROOT"
 
 echo "🔍 检查端口 $PORT..."
 
@@ -21,4 +25,5 @@ else
 fi
 
 echo "🚀 启动 API 服务器..."
-pnpm dev:api
+# 运行完整的开发环境（包括 API 服务器和 Web UI）
+exec pnpm exec tsx scripts/dev.ts

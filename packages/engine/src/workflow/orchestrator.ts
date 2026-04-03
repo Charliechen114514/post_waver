@@ -24,6 +24,8 @@ export class WorkflowOrchestrator {
     postId: string,
     options: {
       fast?: boolean
+      injectionTemplateId?: string
+      includeRelatedLinks?: boolean
       onProgress?: (step: number, total: number, stepName: string) => void
     } = {}
   ): Promise<{ success: boolean; wechatReplacedContent?: string }> {
@@ -62,11 +64,20 @@ export class WorkflowOrchestrator {
       // 4. 生成平台产物（FullPublishPipeline 内部会处理文件移动）
       console.log(`\n📝 4/5 生成平台产物...`)
       onProgress?.(4, 5, '生成平台产物')
+
+      // 🔍 调试：打印传递给publishPipeline的参数
+      console.log(`\n🔍 [DEBUG Orchestrator] 传递给FullPublishPipeline:`)
+      console.log(`  postId: ${postId}`)
+      console.log(`  injectionTemplateId: ${options.injectionTemplateId || '(无)'}`)
+      console.log(`  includeRelatedLinks: ${options.includeRelatedLinks}`)
+
       const result = await this.publishPipeline.publish(postId, {
         skipSync: false,
         skipPageGen: false,
         openBrowser: fast,  // fast 模式下打开浏览器
-        mode: 'fast'
+        mode: 'fast',
+        injectionTemplateId: options.injectionTemplateId,
+        includeRelatedLinks: options.includeRelatedLinks ?? true
       })
 
       if (!result.success) {

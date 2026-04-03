@@ -448,3 +448,22 @@
   gap: 12px;
   justify-content: flex-end;
 }
+
+/* 链接按钮样式 */
+.link-button {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  margin-left: 8px;
+}
+
+.link-button:hover {
+  background-color: #f0f0ff;
+  text-decoration: underline;
+}

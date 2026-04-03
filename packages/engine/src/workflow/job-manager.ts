@@ -3,6 +3,12 @@
  * 管理 workflow 的后台任务状态
  */
 
+export interface JobOutputs {
+  wechatReplacedContent?: string
+  injectionTemplateId?: string
+  includeRelatedLinks?: boolean
+}
+
 export interface JobStatus {
   jobId: string
   postId: string
@@ -15,7 +21,7 @@ export interface JobStatus {
   startedAt: Date
   completedAt?: Date
   error?: string
-  outputs?: any
+  outputs?: JobOutputs
 }
 
 export class JobManager {

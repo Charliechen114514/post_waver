@@ -1,5 +1,5 @@
 import { generateHashID } from '@content-hub/core'
-import { mkdirSync, writeFile } from 'fs'
+import { mkdirSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { generateImageListFile } from '@content-hub/core'
 
@@ -47,18 +47,18 @@ export async function generatePublishPage(
 
   // 写入文件
   const indexPath = join(pageDir, 'index.html')
-  writeFile(indexPath, html, 'utf-8', (err) => {
-    if (err) throw err
-  })
+  writeFileSync(indexPath, html, 'utf-8')
 
   console.log(`✅ 发布页面已生成: ${indexPath}`)
 
   // 保存各平台内容
   for (const platform of platforms) {
     const contentPath = join(pageDir, `${platform.platform}.txt`)
-    writeFile(contentPath, platform.content, 'utf-8', (err) => {
-      if (err) throw err
-    })
+    writeFileSync(contentPath, platform.content, 'utf-8')
+
+    // 🔍 调试：显示写入内容的前150字符
+    console.log(`   ✅ 已写入 ${platform.platform}.txt (${platform.content.length} 字符)`)
+    console.log(`      前150字符: ${platform.content.substring(0, 150)}`)
   }
 
   // 生成图片列表文件到产物目录

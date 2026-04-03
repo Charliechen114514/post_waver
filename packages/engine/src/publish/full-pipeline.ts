@@ -17,6 +17,8 @@ export interface FullPublishOptions {
   skipHexo?: boolean
   openBrowser?: boolean
   mode?: 'interactive' | 'fast' | 'preview-only'
+  injectionTemplateId?: string
+  includeRelatedLinks?: boolean
 }
 
 export class FullPublishPipeline {
@@ -253,19 +255,159 @@ export class FullPublishPipeline {
         // 为不同平台使用不同的内容：
         // - 微信：使用替换后的内容（微信CDN）
         // - 掘金/HTML：使用原始内容（保持本地路径）
-        const originalContent = this.originalContent || (await this.parsePost(postId)).content
-        const wechatContent = this.wechatReplacedContent || originalContent
+        let originalContent = this.originalContent || (await this.parsePost(postId)).content
+        let wechatContent = this.wechatReplacedContent || originalContent
+
+        // 🔍 调试：打印收到的选项
+        console.log(`\n🔍 [DEBUG FullPipeline] Step 5 生成发布页面`)
+        console.log(`  postId: ${postId}`)
+        console.log(`  injectionTemplateId: ${options.injectionTemplateId || '(未指定)'}`)
+        console.log(`  includeRelatedLinks: ${options.includeRelatedLinks}`)
+        console.log(`  原始内容长度: ${originalContent.length} 字符`)
+
+        // 应用注入模板（如果指定）
+        if (options.injectionTemplateId) {
+          console.log(`\n💉 [DEBUG] 开始应用注入模板...`)
+          try {
+            const { prisma } = await import('@content-hub/database')
+            const template = await prisma.injectionTemplate.findUnique({
+              where: { id: options.injectionTemplateId }
+            })
+
+            console.log(`  查询模板结果:`, template ? `找到模板 "${template.name}"` : '未找到模板')
+
+            if (template && template.enabled && template.content) {
+              console.log(`  模板内容: "${template.content}"`)
+              const { injectTitlePostContent, formatInjectionForPlatform } = await import('@content-hub/core')
+
+              // 为不同平台应用注入
+              const juejinInjected = injectTitlePostContent(originalContent, {
+                platform: 'juejin',
+                customContent: formatInjectionForPlatform(template.content, 'juejin'),
+                enabled: true
+              })
+              const wechatInjected = injectTitlePostContent(wechatContent, {
+                platform: 'wechat',
+                customContent: formatInjectionForPlatform(template.content, 'wechat'),
+                enabled: true
+              })
+              const htmlInjected = injectTitlePostContent(originalContent, {
+                platform: 'html',
+                customContent: formatInjectionForPlatform(template.content, 'html'),
+                enabled: true
+              })
+
+              // 更新内容为注入后的版本
+              originalContent = juejinInjected
+              wechatContent = wechatInjected  // 🔧 修复：更新微信内容
+
+              console.log(`  ✅ 掘金注入后内容长度: ${juejinInjected.length} 字符`)
+              console.log(`  ✅ 微信注入后内容长度: ${wechatInjected.length} 字符`)
+              console.log(`  ✅ 已应用注入模板: ${template.name}`)
+            } else {
+              console.log(`  ⚠️ 模板未启用或内容为空`)
+            }
+          } catch (error) {
+            console.warn('  ❌ 应用注入模板失败:', error)
+          }
+        } else {
+          console.log(`  ⏭️ 跳过注入模板（未指定模板ID）`)
+        }
+
+        // 应用相关链接（如果启用）
+        if (options.includeRelatedLinks !== false) {
+          console.log(`\n🔗 [DEBUG] 开始应用相关链接...`)
+          try {
+            const { injectRelatedLinks } = await import('@content-hub/core')
+            const { prisma } = await import('@content-hub/database')
+
+            // 获取文章索引
+            const contentIndex = await prisma.contentIndex.findUnique({
+              where: { id: postId }
+            })
+
+            console.log(`  文章索引查询结果:`, contentIndex ? '找到索引' : '未找到索引')
+
+            if (contentIndex) {
+              const allIndexes = await prisma.contentIndex.findMany()
+              console.log(`  总索引数: ${allIndexes.length}`)
+
+              // 构建文章映射
+              const postsMap = new Map<string, any>()
+              allIndexes.forEach(idx => {
+                postsMap.set(idx.id, {
+                  id: idx.id,
+                  title: idx.title,
+                  date: idx.date.toISOString(),
+                  tags: JSON.parse(idx.tags),
+                  contentHash: idx.contentHash,
+                  filepath: idx.filepath,
+                  draft: idx.draft,
+                  prev: idx.prev,
+                  next: idx.next,
+                  related: idx.related ? JSON.parse(idx.related) : []
+                })
+              })
+
+              // 获取当前文章信息
+              const currentPost = postsMap.get(postId) || {
+                id: contentIndex.id,
+                title: contentIndex.title,
+                date: contentIndex.date.toISOString(),
+                tags: JSON.parse(contentIndex.tags),
+                contentHash: contentIndex.contentHash,
+                filepath: contentIndex.filepath,
+                draft: contentIndex.draft,
+                prev: contentIndex.prev,
+                next: contentIndex.next,
+                related: contentIndex.related ? JSON.parse(contentIndex.related) : []
+              }
+
+              console.log(`  当前文章信息:`, {
+                title: currentPost.title,
+                prev: currentPost.prev || '(无)',
+                next: currentPost.next || '(无)',
+                relatedCount: currentPost.related?.length || 0
+              })
+
+              // 注入相关链接
+              const beforeLength = originalContent.length
+              const beforeWechatLength = wechatContent.length
+
+              originalContent = injectRelatedLinks(originalContent, currentPost, postsMap)
+              wechatContent = injectRelatedLinks(wechatContent, currentPost, postsMap)  // 🔧 修复：微信也应用相关链接
+
+              const afterLength = originalContent.length
+              const afterWechatLength = wechatContent.length
+
+              console.log(`  ✅ 已应用相关链接`)
+              console.log(`  掘金: ${beforeLength} → ${afterLength} (+${afterLength - beforeLength})`)
+              console.log(`  微信: ${beforeWechatLength} → ${afterWechatLength} (+${afterWechatLength - beforeWechatLength})`)
+            } else {
+              console.log(`  ⚠️ 文章没有索引，跳过相关链接`)
+            }
+          } catch (error) {
+            console.warn('  ❌ 应用相关链接失败:', error)
+          }
+        } else {
+          console.log(`  ⏭️ 跳过相关链接（已禁用）`)
+        }
 
         console.log('  🔄 转换平台产物...')
         console.log(`     - 微信: 使用微信CDN链接`)
         console.log(`     - 掘金: 使用原始图片路径`)
         console.log(`     - HTML: 使用原始图片路径`)
 
+        // 🔍 调试：打印即将转换的内容
+        console.log(`\n🔍 [DEBUG] 准备生成平台产物`)
+        console.log(`  originalContent 前100字符:`, originalContent.substring(0, 100))
+        console.log(`  wechatContent 前100字符:`, wechatContent.substring(0, 100))
+
         const platforms = [
           {
             platform: 'juejin',
             name: '掘金',
-            content: await transformForJuejin(originalContent)  // 使用原始内容
+            content: await transformForJuejin(originalContent)  // 使用处理后的内容
           },
           {
             platform: 'wechat',
@@ -275,9 +417,14 @@ export class FullPublishPipeline {
           {
             platform: 'html',
             name: 'HTML',
-            content: await markdownToHTML(originalContent)  // 使用原始内容
+            content: await markdownToHTML(originalContent)  // 使用处理后的内容
           }
         ]
+
+        // 🔍 调试：打印转换后的内容
+        console.log(`\n🔍 [DEBUG] 平台产物生成完成`)
+        console.log(`  掘金产物 前150字符:`, platforms[0].content.substring(0, 150))
+        console.log(`  微信产物 前150字符:`, platforms[1].content.substring(0, 150))
 
         result.outputs.platforms = platforms
 

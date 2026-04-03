@@ -4,6 +4,7 @@ import PostDetail from './pages/PostDetail'
 import PublishWorkspace from './pages/PublishWorkspace'
 import PublishingWorkspace from './pages/PublishingWorkspace'
 import PostPreview from './pages/PostPreview'
+import InjectionTemplateManager from './pages/InjectionTemplateManager'
 import DeploymentBanner from './components/DeploymentBanner'
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
             <Route path="/publish" element={<PublishWorkspace />} />
             <Route path="/preview/:postId" element={<PostPreview />} />
             <Route path="/publishing/:batchId" element={<PublishingWorkspace />} />
+            <Route path="/templates" element={<InjectionTemplateManager />} />
           </Routes>
         </main>
       </div>

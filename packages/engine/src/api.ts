@@ -238,7 +238,7 @@ export async function createAPIServer(options: {
   app.post('/api/posts/:id/preview', async (c) => {
     try {
       const { id } = c.req.param()
-      const { platform, theme } = await c.req.json()
+      const { platform, theme, injectionTemplateId, includeRelatedLinks = true } = await c.req.json()
 
       if (!['juejin', 'wechat', 'html'].includes(platform)) {
         return c.json({ error: '不支持的平台' }, 400)
@@ -282,6 +282,90 @@ export async function createAPIServer(options: {
           }
         } catch (error) {
           console.warn('获取job内容失败，使用文件内容:', error)
+        }
+      }
+
+      // 应用标题注入（如果指定了模板）
+      if (injectionTemplateId) {
+        try {
+          const { prisma } = await import('@content-hub/database')
+          const template = await prisma.injectionTemplate.findUnique({
+            where: { id: injectionTemplateId }
+          })
+
+          if (template && template.enabled && template.content) {
+            const { injectTitlePostContent, formatInjectionForPlatform } = await import('@content-hub/core')
+
+            // 格式化注入内容
+            const formattedContent = formatInjectionForPlatform(template.content, platform)
+
+            // 注入到内容中
+            useContent = injectTitlePostContent(useContent, {
+              platform,
+              customContent: formattedContent,
+              enabled: true,
+              position: 'after_title'
+            })
+
+            console.log(`✅ 已应用注入模板: ${template.name}`)
+          }
+        } catch (error) {
+          console.warn('应用注入模板失败:', error)
+        }
+      }
+
+      // 应用相关链接（如果启用）
+      if (includeRelatedLinks) {
+        try {
+          const { injectRelatedLinks } = await import('@content-hub/core')
+          const { prisma } = await import('@content-hub/database')
+
+          // 获取文章的索引信息
+          const contentIndex = await prisma.contentIndex.findUnique({
+            where: { id }
+          })
+
+          if (contentIndex) {
+            // 获取所有文章索引
+            const allIndexes = await prisma.contentIndex.findMany()
+
+            // 构建文章映射
+            const postsMap = new Map<string, any>()
+            allIndexes.forEach(idx => {
+              postsMap.set(idx.id, {
+                id: idx.id,
+                title: idx.title,
+                date: idx.date.toISOString(),
+                tags: JSON.parse(idx.tags),
+                contentHash: idx.contentHash,
+                filepath: idx.filepath,
+                draft: idx.draft,
+                prev: idx.prev,
+                next: idx.next,
+                related: idx.related ? JSON.parse(idx.related) : []
+              })
+            })
+
+            // 获取当前文章的完整信息
+            const currentPost = postsMap.get(id) || {
+              id: contentIndex.id,
+              title: contentIndex.title,
+              date: contentIndex.date.toISOString(),
+              tags: JSON.parse(contentIndex.tags),
+              contentHash: contentIndex.contentHash,
+              filepath: contentIndex.filepath,
+              draft: contentIndex.draft,
+              prev: contentIndex.prev,
+              next: contentIndex.next,
+              related: contentIndex.related ? JSON.parse(contentIndex.related) : []
+            }
+
+            // 注入相关链接
+            useContent = injectRelatedLinks(useContent, currentPost, postsMap)
+            console.log(`✅ 已应用相关链接`)
+          }
+        } catch (error) {
+          console.warn('应用相关链接失败:', error)
         }
       }
 
@@ -562,6 +646,148 @@ export async function createAPIServer(options: {
     }
   })
 
+  // ========== 注入模板管理 ==========
+
+  // 获取所有注入模板
+  app.get('/api/injection-templates', async (c) => {
+    try {
+      const { prisma } = await import('@content-hub/database')
+
+      const templates = await prisma.injectionTemplate.findMany({
+        orderBy: { createdAt: 'desc' }
+      })
+
+      return c.json({
+        success: true,
+        templates
+      })
+    } catch (error) {
+      console.error('获取注入模板失败:', error)
+      return c.json({ error: '获取注入模板失败', details: error instanceof Error ? error.message : String(error) }, 500)
+    }
+  })
+
+  // 创建注入模板
+  app.post('/api/injection-templates', async (c) => {
+    try {
+      const { name, description, content, enabled = true } = await c.req.json()
+
+      if (!name || !content) {
+        return c.json({ error: '缺少必要参数 (name, content)' }, 400)
+      }
+
+      // 验证内容长度
+      if (content.length > 500) {
+        return c.json({ error: '注入内容过长，建议不超过 500 字符' }, 400)
+      }
+
+      const { prisma } = await import('@content-hub/database')
+
+      const template = await prisma.injectionTemplate.create({
+        data: {
+          name,
+          description: description || '',
+          content,
+          enabled
+        }
+      })
+
+      console.log(`✅ 已创建注入模板: ${name}`)
+
+      return c.json({
+        success: true,
+        message: '注入模板创建成功',
+        template
+      })
+    } catch (error: any) {
+      console.error('创建注入模板失败:', error)
+
+      // 处理唯一约束冲突
+      if (error.code === 'P2002') {
+        return c.json({ error: '模板名称已存在' }, 400)
+      }
+
+      return c.json({ error: '创建注入模板失败', details: error instanceof Error ? error.message : String(error) }, 500)
+    }
+  })
+
+  // 更新注入模板
+  app.put('/api/injection-templates/:id', async (c) => {
+    try {
+      const { id } = c.req.param()
+      const { name, description, content, enabled } = await c.req.json()
+
+      // 验证内容长度
+      if (content && content.length > 500) {
+        return c.json({ error: '注入内容过长，建议不超过 500 字符' }, 400)
+      }
+
+      const { prisma } = await import('@content-hub/database')
+
+      const updateData: any = {}
+      if (name !== undefined) updateData.name = name
+      if (description !== undefined) updateData.description = description
+      if (content !== undefined) updateData.content = content
+      if (enabled !== undefined) updateData.enabled = enabled
+
+      const template = await prisma.injectionTemplate.update({
+        where: { id },
+        data: updateData
+      })
+
+      console.log(`✅ 已更新注入模板: ${template.name}`)
+
+      return c.json({
+        success: true,
+        message: '注入模板更新成功',
+        template
+      })
+    } catch (error: any) {
+      console.error('更新注入模板失败:', error)
+
+      // 处理记录不存在
+      if (error.code === 'P2025') {
+        return c.json({ error: '模板不存在' }, 404)
+      }
+
+      // 处理唯一约束冲突
+      if (error.code === 'P2002') {
+        return c.json({ error: '模板名称已存在' }, 400)
+      }
+
+      return c.json({ error: '更新注入模板失败', details: error instanceof Error ? error.message : String(error) }, 500)
+    }
+  })
+
+  // 删除注入模板
+  app.delete('/api/injection-templates/:id', async (c) => {
+    try {
+      const { id } = c.req.param()
+
+      const { prisma } = await import('@content-hub/database')
+
+      await prisma.injectionTemplate.delete({
+        where: { id }
+      })
+
+      console.log(`✅ 已删除注入模板: ${id}`)
+
+      return c.json({
+        success: true,
+        message: '注入模板删除成功'
+      })
+    } catch (error: any) {
+      console.error('删除注入模板失败:', error)
+
+      // 处理记录不存在
+      if (error.code === 'P2025') {
+        return c.json({ error: '模板不存在' }, 404)
+      }
+
+      return c.json({ error: '删除注入模板失败', details: error instanceof Error ? error.message : String(error) }, 500)
+    }
+  })
+
   // ========== Workflow 相关 API ==========
 
   // 扫描 content/posts/ 目录
@@ -608,7 +834,13 @@ export async function createAPIServer(options: {
   // 批量发布（非阻塞）
   app.post('/api/workflow/batch-publish', async (c) => {
     try {
-      const { postIds, skipPreview = true } = await c.req.json()
+      const { postIds, skipPreview = true, templateMap = {}, includeRelatedLinks = true } = await c.req.json()
+
+      // 🔍 调试：打印接收到的数据
+      console.log('\n🚀 [DEBUG API] 收到批量发布请求')
+      console.log('  postIds:', postIds)
+      console.log('  templateMap:', JSON.stringify(templateMap, null, 2))
+      console.log('  includeRelatedLinks:', includeRelatedLinks)
 
       if (!Array.isArray(postIds) || postIds.length === 0) {
         return c.json({ error: '请选择要发布的文章' }, 400)
@@ -633,8 +865,16 @@ export async function createAPIServer(options: {
           try {
             jobManager.updateJob(jobId, { status: 'running', stepName: '开始处理' })
 
+            // 🔍 调试：打印每篇文章的配置
+            const articleTemplateId = templateMap[postId]
+            console.log(`\n📝 [DEBUG] 处理文章: ${postId}`)
+            console.log(`  注入模板ID: ${articleTemplateId || '(无)'}`)
+            console.log(`  相关链接: ${includeRelatedLinks}`)
+
             const result = await orchestrator.processPost(postId, {
               fast: skipPreview,
+              injectionTemplateId: articleTemplateId,
+              includeRelatedLinks,
               onProgress: (step, total, stepName) => {
                 jobManager.updateJob(jobId, {
                   currentStep: step,
@@ -650,7 +890,9 @@ export async function createAPIServer(options: {
               stepName: '完成',
               progress: 100,
               outputs: {
-                wechatReplacedContent: result.wechatReplacedContent
+                wechatReplacedContent: result.wechatReplacedContent,
+                injectionTemplateId: articleTemplateId,
+                includeRelatedLinks
               }
             })
           } catch (error: any) {

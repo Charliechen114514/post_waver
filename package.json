@@ -8,6 +8,8 @@
     "dev:safe": "bash scripts/dev-safe.sh",
     "dev:web": "pnpm --filter web-ui dev",
     "dev:api": "bash scripts/start-api-safe.sh",
+    "stop:dev": "bash scripts/stop-dev.sh",
+    "restart:dev": "bash scripts/restart-dev.sh",
     "build": "pnpm -r --workspace-concurrency=1 run build",
     "lint": "pnpm lint:md && pnpm lint:ts",
     "lint:md": "markdownlint-cli2 '**/*.md'",

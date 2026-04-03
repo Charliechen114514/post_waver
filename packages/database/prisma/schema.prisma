@@ -143,3 +143,16 @@ model PlatformIdMapping {
   @@index([postId])
   @@index([platform])
 }
+
+// 注入内容模板表
+model InjectionTemplate {
+  id          String   @id @default(cuid())
+  name        String   @unique  // 模板名称,如"订阅引导"、"版权声明"
+  description String?  // 模板描述
+  content     String   // 注入内容(支持Markdown)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([enabled])
+}

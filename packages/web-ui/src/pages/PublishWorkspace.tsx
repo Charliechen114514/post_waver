@@ -20,6 +20,16 @@ interface Theme {
   cssFile: string
 }
 
+interface InjectionTemplate {
+  id: string
+  name: string
+  description: string
+  content: string
+  enabled: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
 type Platform = 'juejin' | 'wechat' | 'html'
 
 export default function PublishWorkspace() {
@@ -37,6 +47,14 @@ export default function PublishWorkspace() {
   const [themes, setThemes] = useState<Theme[]>([])
   const [selectedTheme, setSelectedTheme] = useState<string>('orangeheart')
   const [showSidebar, setShowSidebar] = useState<boolean>(true)
+
+  // 新增：注入模板和相关链接
+  const [templates, setTemplates] = useState<InjectionTemplate[]>([])
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
+  const [includeRelatedLinks, setIncludeRelatedLinks] = useState<boolean>(true)
+
+  // 存储每篇文章的模板选择: postId -> templateId
+  const [postTemplateMap, setPostTemplateMap] = useState<Record<string, string>>({})
 
   // 从 localStorage 读取左侧栏显示状态
   useEffect(() => {
@@ -84,9 +102,23 @@ export default function PublishWorkspace() {
     if (!hasInitialized.current) {
       handleScan(false) // 初始化扫描不显示提示
       loadThemes()
+      loadTemplates() // 加载注入模板
       hasInitialized.current = true
     }
   }, [])
+
+  // 加载注入模板列表
+  const loadTemplates = async () => {
+    try {
+      const response = await fetch('/api/injection-templates')
+      const data = await response.json()
+      if (data.success) {
+        setTemplates(data.templates || [])
+      }
+    } catch (error) {
+      console.error('加载模板失败:', error)
+    }
+  }
 
   // 从发布页面返回时重新扫描（但不重复初始化）
   useEffect(() => {
@@ -143,6 +175,16 @@ export default function PublishWorkspace() {
     }
   }
 
+  // 当切换文章时，自动加载该文章的模板选择
+  useEffect(() => {
+    if (currentPreviewId && postTemplateMap[currentPreviewId] !== undefined) {
+      setSelectedTemplateId(postTemplateMap[currentPreviewId])
+    } else if (currentPreviewId) {
+      // 如果文章还没有选择过模板，默认为空
+      setSelectedTemplateId('')
+    }
+  }, [currentPreviewId])
+
   // 预览内容
   useEffect(() => {
     if (!currentPreviewId) return
@@ -154,7 +196,9 @@ export default function PublishWorkspace() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             platform: selectedPlatform,
-            theme: selectedPlatform === 'wechat' ? selectedTheme : undefined
+            theme: selectedPlatform === 'wechat' ? selectedTheme : undefined,
+            injectionTemplateId: selectedTemplateId || undefined,
+            includeRelatedLinks
           })
         })
 
@@ -169,7 +213,7 @@ export default function PublishWorkspace() {
     }
 
     fetchPreview()
-  }, [currentPreviewId, selectedPlatform, selectedTheme])
+  }, [currentPreviewId, selectedPlatform, selectedTheme, selectedTemplateId, includeRelatedLinks])
 
   // 切换平台
   const currentPost = posts.find(p => p.id === currentPreviewId)
@@ -191,13 +235,25 @@ export default function PublishWorkspace() {
   // 确认批量发布
   const handleBatchPublishConfirm = async (postIds: string[]) => {
     try {
+      // 🔍 调试：打印发送的数据
+      console.log('🚀 [DEBUG] 批量发布请求数据:')
+      console.log('  postIds:', postIds)
+      console.log('  templateMap:', postTemplateMap)
+      console.log('  includeRelatedLinks:', includeRelatedLinks)
+
+      const requestData = {
+        postIds,
+        skipPreview: true,  // 在 GUI 中已完成预览确认
+        templateMap: postTemplateMap,  // 传递每篇文章的模板选择
+        includeRelatedLinks  // 传递相关链接设置
+      }
+
+      console.log('  完整请求数据:', JSON.stringify(requestData, null, 2))
+
       const response = await fetch('/api/workflow/batch-publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          postIds,
-          skipPreview: true  // 在 GUI 中已完成预览确认
-        })
+        body: JSON.stringify(requestData)
       })
 
       const data = await response.json()
@@ -219,6 +275,17 @@ export default function PublishWorkspace() {
     const newState = !showSidebar
     setShowSidebar(newState)
     localStorage.setItem('publishSidebarVisible', JSON.stringify(newState))
+  }
+
+  // 处理模板选择 - 为当前文章保存模板选择
+  const handleTemplateChange = (templateId: string) => {
+    setSelectedTemplateId(templateId)
+    if (currentPreviewId) {
+      setPostTemplateMap(prev => ({
+        ...prev,
+        [currentPreviewId]: templateId
+      }))
+    }
   }
 
   // 切换文章勾选状态
@@ -348,6 +415,44 @@ export default function PublishWorkspace() {
                 </select>
               </div>
             )}
+
+            {/* 注入模板选择器 */}
+            <div className="selector-group">
+              <label>注入内容：</label>
+              <select
+                value={selectedTemplateId}
+                onChange={(e) => handleTemplateChange(e.target.value)}
+                className="select"
+              >
+                <option value="">无</option>
+                {templates.filter(t => t.enabled).map(template => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}
+                  </option>
+                ))}
+              </select>
+              {templates.length === 0 && (
+                <button
+                  onClick={() => window.location.href = '/post_waver/templates'}
+                  className="link-button"
+                  type="button"
+                >
+                  + 管理模板
+                </button>
+              )}
+            </div>
+
+            {/* 相关链接开关 */}
+            <div className="checkbox-group">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={includeRelatedLinks}
+                  onChange={(e) => setIncludeRelatedLinks(e.target.checked)}
+                />
+                显示相关链接
+              </label>
+            </div>
 
             <div className="checkbox-group">
               <label>

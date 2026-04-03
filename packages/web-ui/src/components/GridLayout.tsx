@@ -3,6 +3,12 @@ import { CopyButton } from './CopyButton'
 import { showToast } from './Toast'
 import './GridLayout.css'
 
+interface JobOutputs {
+  wechatReplacedContent?: string
+  injectionTemplateId?: string
+  includeRelatedLinks?: boolean
+}
+
 interface JobStatus {
   jobId: string
   postId: string
@@ -12,6 +18,7 @@ interface JobStatus {
   stepName: string
   progress: number
   error?: string
+  outputs?: JobOutputs
 }
 
 interface Platform {
@@ -85,10 +92,21 @@ export function GridLayout({ postId, job }: GridLayoutProps) {
         try {
           setLoading(prev => ({ ...prev, [platform.platform]: true }))
 
+          // 🔧 从 Job outputs 中获取模板配置
           const requestBody: any = { platform: platform.platform }
           if (platform.platform === 'wechat') {
             requestBody.theme = defaultThemes.wechat
           }
+
+          // 添加注入模板和相关链接配置
+          if (job.outputs?.injectionTemplateId) {
+            requestBody.injectionTemplateId = job.outputs.injectionTemplateId
+          }
+          if (job.outputs?.includeRelatedLinks !== undefined) {
+            requestBody.includeRelatedLinks = job.outputs.includeRelatedLinks
+          }
+
+          console.log(`[GridLayout] 获取 ${platform.name} 内容，参数:`, requestBody)
 
           const response = await fetch(`/api/posts/${postId}/preview`, {
             method: 'POST',
