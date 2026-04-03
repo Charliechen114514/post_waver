@@ -36,6 +36,10 @@ export function GridLayout({ postId, job }: GridLayoutProps) {
   const [htmlContents, setHtmlContents] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState<Record<string, boolean>>({})
   const [defaultThemes, setDefaultThemes] = useState<Record<string, string>>({})
+  const [platformUrls, setPlatformUrls] = useState<Record<string, string>>({})
+  const [showUrlDialog, setShowUrlDialog] = useState(false)
+  const [editingPlatform, setEditingPlatform] = useState<string | null>(null)
+  const [newUrl, setNewUrl] = useState('')
 
   // 加载微信主题
   useEffect(() => {
@@ -52,6 +56,22 @@ export function GridLayout({ postId, job }: GridLayoutProps) {
     }
     loadWeChatThemes()
   }, [])
+
+  // 加载全局的平台发布 URLs（只加载一次）
+  useEffect(() => {
+    const loadPlatformUrls = async () => {
+      try {
+        const response = await fetch('/api/platform-urls')
+        const data = await response.json()
+        if (data.success) {
+          setPlatformUrls(data.data || {})
+        }
+      } catch (error) {
+        console.error('获取平台 URL 失败:', error)
+      }
+    }
+    loadPlatformUrls()
+  }, []) // 空依赖数组，只在组件挂载时加载一次
 
   // 当任务完成时，获取各平台内容
   useEffect(() => {
@@ -91,6 +111,69 @@ export function GridLayout({ postId, job }: GridLayoutProps) {
       })
     }
   }, [job.status, postId, defaultThemes])
+
+  // URL 设置处理函数
+  const handleSetUrl = (platform: string) => {
+    setEditingPlatform(platform)
+    setNewUrl(platformUrls[platform] || '')
+    setShowUrlDialog(true)
+  }
+
+  const handleSaveUrl = async () => {
+    if (!editingPlatform) return
+
+    try {
+      const response = await fetch('/api/platform-urls', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform: editingPlatform,
+          url: newUrl
+        })
+      })
+
+      if (response.ok) {
+        setPlatformUrls(prev => ({ ...prev, [editingPlatform]: newUrl }))
+        setShowUrlDialog(false)
+        showToast(`${editingPlatform} 发布 URL 已设置！`, 'success')
+      } else {
+        const errorData = await response.json()
+        showToast(`设置 URL 失败: ${errorData.error || '未知错误'}`, 'error')
+      }
+    } catch (error) {
+      showToast(`设置 URL 失败: ${error instanceof Error ? error.message : String(error)}`, 'error')
+    }
+  }
+
+  const handleDeleteUrl = async () => {
+    if (!editingPlatform) return
+
+    try {
+      const response = await fetch('/api/platform-urls', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform: editingPlatform,
+          url: '' // 空字符串表示删除URL
+        })
+      })
+
+      if (response.ok) {
+        setPlatformUrls(prev => {
+          const newUrls = { ...prev }
+          delete newUrls[editingPlatform]
+          return newUrls
+        })
+        setShowUrlDialog(false)
+        showToast(`${editingPlatform} 发布 URL 已清除`, 'success')
+      } else {
+        const errorData = await response.json()
+        showToast(`清除 URL 失败: ${errorData.error || '未知错误'}`, 'error')
+      }
+    } catch (error) {
+      showToast(`清除 URL 失败: ${error instanceof Error ? error.message : String(error)}`, 'error')
+    }
+  }
 
   return (
     <div className="grid-layout-container">
@@ -210,6 +293,32 @@ export function GridLayout({ postId, job }: GridLayoutProps) {
                       >
                         👁️ 预览
                       </button>
+                      {platformUrls[platform.platform] ? (
+                        <>
+                          <button
+                            className="btn btn-secondary"
+                            onClick={() => handleSetUrl(platform.platform)}
+                            title="编辑发布页面 URL"
+                          >
+                            ✏️ 编辑
+                          </button>
+                          <button
+                            className="btn btn-primary"
+                            onClick={() => window.open(platformUrls[platform.platform], '_blank')}
+                            title="点击我直接跳转发布新内容"
+                          >
+                            🚀 发布新内容
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => handleSetUrl(platform.platform)}
+                          title="设置发布页面 URL"
+                        >
+                          🔗 设置 URL
+                        </button>
+                      )}
                     </div>
                   </>
                 ) : (
@@ -224,6 +333,63 @@ export function GridLayout({ postId, job }: GridLayoutProps) {
           </div>
         ))}
       </div>
+
+      {/* URL 设置对话框 */}
+      {showUrlDialog && (
+        <div className="url-dialog-overlay" onClick={() => setShowUrlDialog(false)}>
+          <div className="url-dialog" onClick={e => e.stopPropagation()}>
+            <h3>设置发布页面 URL</h3>
+            <p>请输入 {editingPlatform} 平台的发布页面 URL:</p>
+            <input
+              type="text"
+              value={newUrl}
+              onChange={e => setNewUrl(e.target.value)}
+              placeholder="例如: https://juejin.cn/editor"
+              className="url-input"
+            />
+            {/* 常用 URL 快捷按钮 */}
+            <div className="url-presets">
+              <span className="preset-label">快捷选择：</span>
+              {editingPlatform === 'juejin' && (
+                <button className="btn-preset" onClick={() => setNewUrl('https://juejin.cn/editor')}>
+                  掘金编辑器
+                </button>
+              )}
+              {editingPlatform === 'wechat' && (
+                <button className="btn-preset" onClick={() => setNewUrl('https://mp.weixin.qq.com/')}>
+                  微信公众平台
+                </button>
+              )}
+              {editingPlatform === 'html' && (
+                <>
+                  <button className="btn-preset" onClick={() => setNewUrl('https://juejin.cn/editor')}>
+                    掘金
+                  </button>
+                  <button className="btn-preset" onClick={() => setNewUrl('https://zhuanlan.zhihu.com/write')}>
+                    知乎
+                  </button>
+                  <button className="btn-preset" onClick={() => setNewUrl('https://mp.csdn.net/mp_blog/creation/editor')}>
+                    CSDN
+                  </button>
+                </>
+              )}
+            </div>
+            <div className="dialog-actions">
+              <button className="btn btn-secondary" onClick={() => setShowUrlDialog(false)}>
+                取消
+              </button>
+              {platformUrls[editingPlatform!] && (
+                <button className="btn btn-danger" onClick={handleDeleteUrl}>
+                  清除 URL
+                </button>
+              )}
+              <button className="btn btn-primary" onClick={handleSaveUrl}>
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

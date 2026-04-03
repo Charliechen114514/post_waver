@@ -73,6 +73,115 @@ export async function createAPIServer(options: {
     }
   })
 
+  // 获取全局的平台发布 URL 配置（从数据库 Config 表）
+  app.get('/api/platform-urls', async (c) => {
+    try {
+      const { prisma } = await import('@content-hub/database')
+
+      const configs = await prisma.config.findMany({
+        where: { category: 'platform-urls' }
+      })
+
+      const result: Record<string, string> = {}
+      for (const config of configs) {
+        // 移除分类前缀，只保留 key 部分
+        const shortKey = config.key.replace('platform-urls.', '')
+        // URL 直接作为字符串，不需要 JSON.parse
+        result[shortKey] = config.value
+      }
+
+      return c.json({
+        success: true,
+        data: result
+      })
+    } catch (error) {
+      console.error('获取平台 URL 失败:', error)
+      return c.json({ error: '获取平台 URL 失败', details: error instanceof Error ? error.message : String(error) }, 500)
+    }
+  })
+
+  // 设置全局的平台发布 URL（保存到数据库 Config 表）
+  app.post('/api/platform-urls', async (c) => {
+    try {
+      const { platform, url } = await c.req.json()
+
+      if (!platform) {
+        return c.json({ error: '缺少 platform 参数' }, 400)
+      }
+
+      const { prisma } = await import('@content-hub/database')
+
+      const fullKey = `platform-urls.${platform}`
+
+      // 直接保存字符串值，不使用 JSON.stringify
+      await prisma.config.upsert({
+        where: { key: fullKey },
+        update: { value: url || '' },
+        create: {
+          key: fullKey,
+          value: url || '',
+          category: 'platform-urls'
+        }
+      })
+
+      console.log(`✅ 已保存 ${platform} 平台的发布 URL: ${url}`)
+
+      return c.json({
+        success: true,
+        message: `${platform} 平台的发布 URL 已保存`
+      })
+    } catch (error) {
+      console.error('保存平台 URL 失败:', error)
+      return c.json({ error: '保存平台 URL 失败', details: error instanceof Error ? error.message : String(error) }, 500)
+    }
+  })
+
+  // 获取文章的平台发布 URL（从数据库）
+  // 注意：这个路由必须放在 /api/posts/:id 之前，因为 Hono 按照定义顺序匹配路由
+  app.get('/api/posts/:postId/platform-urls', async (c) => {
+    try {
+      const { postId } = c.req.param()
+      const { PlatformIdService } = await import('@content-hub/database')
+
+      const platformUrls = await PlatformIdService.getAllForPost(postId)
+
+      return c.json({
+        success: true,
+        data: platformUrls
+      })
+    } catch (error) {
+      console.error('获取平台 URL 失败:', error)
+      return c.json({ error: '获取平台 URL 失败', details: error instanceof Error ? error.message : String(error) }, 500)
+    }
+  })
+
+  // 设置文章的平台发布 URL（保存到数据库）
+  app.post('/api/posts/:postId/platform-urls', async (c) => {
+    try {
+      const { postId } = c.req.param()
+      const { platform, url } = await c.req.json()
+
+      if (!platform) {
+        return c.json({ error: '缺少 platform 参数' }, 400)
+      }
+
+      const { PlatformIdService } = await import('@content-hub/database')
+
+      // 保存URL到数据库，使用空字符串作为 platformPostId
+      await PlatformIdService.set(postId, platform, '', url || '')
+
+      console.log(`✅ 已保存 ${platform} 平台的发布 URL: ${url}`)
+
+      return c.json({
+        success: true,
+        message: `${platform} 平台的发布 URL 已保存`
+      })
+    } catch (error) {
+      console.error('保存平台 URL 失败:', error)
+      return c.json({ error: '保存平台 URL 失败', details: error instanceof Error ? error.message : String(error) }, 500)
+    }
+  })
+
   // 获取单个文章详情
   app.get('/api/posts/:id', async (c) => {
     try {
