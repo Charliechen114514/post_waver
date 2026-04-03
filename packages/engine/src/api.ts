@@ -73,6 +73,68 @@ export async function createAPIServer(options: {
     }
   })
 
+  // 获取已发布的文章列表（包含平台URL和标签）
+  app.get('/api/posts/published', async (c) => {
+    try {
+      const { prisma } = await import('@content-hub/database')
+
+      // 获取所有已发布的文章
+      const posts = await prisma.post.findMany({
+        where: { status: 'published' },
+        include: { publishRecords: true },
+        orderBy: { publishedAt: 'desc' }
+      })
+
+      // 获取所有文章的ContentIndex信息（用于获取标签）
+      const contentIndexes = await prisma.contentIndex.findMany()
+      const contentIndexMap = new Map(contentIndexes.map(idx => [idx.id, idx]))
+
+      // 获取所有文章的平台URL映射
+      const platformIdMappings = await prisma.platformIdMapping.findMany()
+      const platformUrlMap = new Map<string, Array<{ platform: string; url: string; publishedAt: string | null }>>()
+
+      platformIdMappings.forEach(mapping => {
+        if (!platformUrlMap.has(mapping.postId)) {
+          platformUrlMap.set(mapping.postId, [])
+        }
+        platformUrlMap.get(mapping.postId)!.push({
+          platform: mapping.platform,
+          url: mapping.url || '',
+          publishedAt: mapping.publishedAt?.toISOString() || null
+        })
+      })
+
+      // 组装数据
+      const result = await Promise.all(posts.map(async (post) => {
+        // 从ContentIndex获取标签
+        const contentIndex = contentIndexMap.get(post.postId)
+        const contentIndexTags = contentIndex ? JSON.parse(contentIndex.tags) : []
+
+        // 获取平台URL
+        const platformUrls = platformUrlMap.get(post.postId) || []
+
+        return {
+          id: post.id,
+          postId: post.postId,
+          title: post.title || post.postId,
+          status: post.status,
+          publishedAt: post.publishedAt?.toISOString() || post.updatedAt?.toISOString() || new Date().toISOString(),
+          tags: [], // Post表没有tags字段
+          contentIndexTags,
+          platformUrls
+        }
+      }))
+
+      return c.json({
+        success: true,
+        posts: result
+      })
+    } catch (error) {
+      console.error('❌ 获取已发布文章列表失败:', error)
+      return c.json({ error: '获取已发布文章列表失败', details: error instanceof Error ? error.message : String(error) }, 500)
+    }
+  })
+
   // 获取全局的平台发布 URL 配置（从数据库 Config 表）
   app.get('/api/platform-urls', async (c) => {
     try {
@@ -179,6 +241,53 @@ export async function createAPIServer(options: {
     } catch (error) {
       console.error('保存平台 URL 失败:', error)
       return c.json({ error: '保存平台 URL 失败', details: error instanceof Error ? error.message : String(error) }, 500)
+    }
+  })
+
+  // 更新文章的元数据（平台URL和标签）
+  app.put('/api/posts/:postId/metadata', async (c) => {
+    try {
+      const { postId } = c.req.param()
+      const { platformUrls, tags } = await c.req.json()
+
+      const { prisma, PlatformIdService } = await import('@content-hub/database')
+
+      // 更新平台URL
+      if (platformUrls && typeof platformUrls === 'object') {
+        for (const [platform, url] of Object.entries(platformUrls)) {
+          // 使用空字符串作为 platformPostId，因为我们只关心URL
+          await PlatformIdService.set(postId, platform, '', url as string)
+        }
+      }
+
+      // 更新标签（更新ContentIndex表）
+      if (Array.isArray(tags)) {
+        const contentIndex = await prisma.contentIndex.findUnique({
+          where: { id: postId }
+        })
+
+        if (contentIndex) {
+          // 更新ContentIndex的标签
+          await prisma.contentIndex.update({
+            where: { id: postId },
+            data: {
+              tags: JSON.stringify(tags),
+              updatedAt: new Date()
+            }
+          })
+          console.log(`✅ 已更新文章 ${postId} 的标签:`, tags)
+        } else {
+          console.warn(`⚠️ ContentIndex中未找到文章 ${postId}，标签未更新`)
+        }
+      }
+
+      return c.json({
+        success: true,
+        message: '元数据更新成功'
+      })
+    } catch (error) {
+      console.error('❌ 更新元数据失败:', error)
+      return c.json({ error: '更新元数据失败', details: error instanceof Error ? error.message : String(error) }, 500)
     }
   })
 

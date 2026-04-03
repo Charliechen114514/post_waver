@@ -5,6 +5,7 @@ import PublishWorkspace from './pages/PublishWorkspace'
 import PublishingWorkspace from './pages/PublishingWorkspace'
 import PostPreview from './pages/PostPreview'
 import InjectionTemplateManager from './pages/InjectionTemplateManager'
+import PublishedPostManager from './pages/PublishedPostManager'
 import DeploymentBanner from './components/DeploymentBanner'
 
 // 处理 Hexo 风格的相关链接重定向
@@ -28,6 +29,7 @@ export default function App() {
             <Route path="/posts" element={<PostList />} />
             <Route path="/posts/:id" element={<PostDetail />} />
             <Route path="/publish" element={<PublishWorkspace />} />
+            <Route path="/published" element={<PublishedPostManager />} />
             <Route path="/preview/:postId" element={<PostPreview />} />
             <Route path="/publishing/:batchId" element={<PublishingWorkspace />} />
             <Route path="/templates" element={<InjectionTemplateManager />} />

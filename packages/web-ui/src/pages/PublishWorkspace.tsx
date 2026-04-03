@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { SplitPreview } from '../components/SplitPreview'
 import { ArticleListSidebar } from '../components/ArticleListSidebar'
 import { showToast } from '../components/Toast'
@@ -312,6 +312,9 @@ export default function PublishWorkspace() {
           <h1>📝 发布工作台</h1>
         </div>
         <div className="actions">
+          <Link to="/published" className="btn btn-secondary">
+            📚 管理已发布文章
+          </Link>
           <button
             onClick={() => handleScan(true)}
             disabled={loading}
