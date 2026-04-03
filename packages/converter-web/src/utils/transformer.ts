@@ -66,7 +66,7 @@ export async function markdownToHTML(markdown: string, removeLocalImages = false
   // 添加 KaTeX CSS 样式
   const katexResources = `
 <!-- KaTeX 基础样式 -->
-<link rel="stylesheet" href="/post_waver/converter/katex-base.css">
+<link rel="stylesheet" href="/post_waver/katex-base.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">`
 
   return katexResources + html
