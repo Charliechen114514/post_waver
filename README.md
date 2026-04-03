@@ -192,18 +192,39 @@ pnpm build
 
 ## 📁 Project Structure
 
+### Package Overview
+
+| Package | Purpose | Language | Description |
+|---------|---------|----------|-------------|
+| @content-hub/core | Content parsing | TypeScript | Markdown parsing, frontmatter, scanning |
+| @content-hub/linker | Content relationships | TypeScript/Python | Related posts, prev/next calculation |
+| @content-hub/transformer | Platform conversion | TypeScript | Platform-specific transformations |
+| @content-hub/adapter | Platform APIs | TypeScript | Platform API adapters |
+| @content-hub/database | Data persistence | TypeScript/Prisma | SQLite database, ORM |
+| @content-hub/config | Configuration | TypeScript | Config management |
+| @content-hub/engine | Publishing engine | TypeScript | API server, workflows |
+| @content-hub/web-ui | Web interface | TypeScript/React | User interface |
+| @content-hub/converter-web | Converter tool | TypeScript/React | Standalone converter |
+
+### Directory Structure
+
 ```
 post_waver/
-├── packages/
-│   ├── core/         # Core parsing logic
-│   ├── linker/       # Content relationship linking
-│   ├── transformer/  # Platform-specific transformers
-│   ├── adapter/      # Platform API adapters
-│   ├── engine/       # Unified publishing engine
-│   └── web-ui/       # Web interface
-├── content/          # Your Markdown articles
-├── scripts/          # Utility scripts
-└── blog/             # Your Hexo blog (not tracked by git)
+├── packages/              # Monorepo packages
+│   ├── core/             # Core functionality
+│   ├── linker/           # Content relationships
+│   ├── transformer/      # Platform transformations
+│   ├── adapter/          # Platform APIs
+│   ├── database/         # Database layer
+│   ├── config/           # Configuration
+│   ├── engine/           # Publishing engine & API
+│   ├── web-ui/           # Web interface
+│   └── converter-web/    # Standalone converter
+├── content/              # Your markdown articles
+├── scripts/              # Utility scripts
+├── docs/                 # Documentation
+├── test/                 # Tests and fixtures
+└── blog/                 # Hexo blog (not tracked)
 ```
 
 ---
@@ -254,11 +275,68 @@ pnpm post:status      # Check post status in database
 
 ---
 
+## 🏗️ Architecture
+
+PostWaver uses a modular monorepo architecture:
+
+1. **Content Layer** (core, linker): Parse and analyze markdown content
+2. **Transformation Layer** (transformer, adapter): Convert for different platforms
+3. **Data Layer** (database, config): Manage persistence and configuration
+4. **Application Layer** (engine, web-ui): Provide publishing workflow and UI
+
+**Learn more**: [Architecture Documentation](ARCHITECTURE.md)
+
+---
+
+## 👥 For Developers
+
+Interested in contributing or extending PostWaver?
+
+- **Developer Guide**: [docs/04-developer-guide/](docs/04-developer-guide/)
+- **API Reference**: [docs/04-developer-guide/api-reference/](docs/04-developer-guide/api-reference/)
+- **Contributing**: [CONTRIBUTING.md](CONTRIBUTING.md)
+
+### Quick Developer Setup
+
+```bash
+# Clone and install
+git clone https://github.com/Charliechen114514/post_waver.git
+cd post_waver
+pnpm install
+
+# Build all packages
+pnpm build
+
+# Run tests
+pnpm test
+
+# Start development servers
+pnpm dev
+```
+
+---
+
 ## 📚 Documentation
 
-- **Roadmap**: [milestones/README.md](milestones/README.md)
-- **Platform Guides**: [docs/platforms/](docs/platforms/)
-- **Technical Decisions**: [03-tech-considerations.md](03-tech-considerations.md)
+### User Documentation
+- 📖 [Documentation Hub](docs/README.md) - Complete documentation index
+- 🚀 [Quick Start](docs/01-getting-started/QUICK_START.md) - 5-minute tutorial
+- 📚 [User Guide](docs/01-getting-started/USER_GUIDE.md) - Complete user guides
+- 🔧 [CLI Reference](docs/02-user-guides/reference/CLI_REFERENCE.md) - Command reference
+- 🛠️ [Troubleshooting](docs/03-troubleshooting/TROUBLESHOOTING.md) - Common issues
+
+### Developer Documentation
+- 🏗️ [Architecture](ARCHITECTURE.md) - System design overview
+- 📦 [Packages](docs/04-developer-guide/packages/) - Package documentation
+- 🔌 [API Reference](docs/04-developer-guide/api-reference/) - API docs
+- 🚀 [Deployment](docs/05-deployment/) - Deployment guides
+- 🤝 [Contributing](CONTRIBUTING.md) - Contribution guidelines
+
+### Platform Guides
+- 掘金: [Juejin Guide](docs/02-user-guides/platforms/juejin-semi-auto-guide.md)
+- 微信: [WeChat Guide](docs/02-user-guides/platforms/wechat-semi-auto-guide.md)
+- CSDN: [CSDN Guide](docs/02-user-guides/platforms/csdn-semi-auto-guide.md)
+- 知乎: [Zhihu Guide](docs/02-user-guides/platforms/zhihu-semi-auto-guide.md)
 
 ---
 
