@@ -230,6 +230,16 @@
   transform: scale(1.05);
 }
 
+.btn-success {
+  background: #10b981;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #059669;
+  transform: scale(1.05);
+}
+
 .btn-secondary {
   background: #f3f4f6;
   color: #333;

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { CopyButton } from './CopyButton'
 import { showToast } from './Toast'
 import './SplitPreview.css'
@@ -17,6 +18,8 @@ export function SplitPreview({ postId, title, platform, content, htmlContent, ex
   const [themes, setThemes] = useState<any[]>([])
   const [currentHtml, setCurrentHtml] = useState<string>(htmlContent || '')
   const [loading, setLoading] = useState(false)
+  const previewRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
 
   // 是否为微信平台
   const isWeChat = platform === 'wechat'
@@ -34,6 +37,40 @@ export function SplitPreview({ postId, title, platform, content, htmlContent, ex
       setCurrentHtml(htmlContent)
     }
   }, [htmlContent])
+
+  // 在 HTML 内容更新后重新绑定链接拦截器
+  useEffect(() => {
+    const previewElement = previewRef.current
+    if (!previewElement) return
+
+    const handleLinkClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      const anchor = target.closest('a') as HTMLAnchorElement
+
+      if (anchor && anchor.href) {
+        const url = new URL(anchor.href)
+        const pathname = url.pathname
+
+        // 检查是否是 Hexo 风格的相关链接 (如 /2026/04/03/test-01-js-basics/)
+        const hexoLinkPattern = /^\/\d{4}\/\d{2}\/\d{2}\/[^/]+\/?$/
+        if (hexoLinkPattern.test(pathname)) {
+          e.preventDefault()
+          // 提取文章 ID
+          const id = pathname.split('/').filter(Boolean).pop()
+          if (id) {
+            console.log(`📎 相关链接跳转: ${anchor.textContent} -> /post_waver/preview/${id}`)
+            navigate(`/preview/${id.replace(/\/$/, '')}`)
+          }
+        }
+      }
+    }
+
+    previewElement.addEventListener('click', handleLinkClick)
+
+    return () => {
+      previewElement.removeEventListener('click', handleLinkClick)
+    }
+  }, [currentHtml, navigate])
 
   // 监听外部主题变化（仅微信平台）
   useEffect(() => {
@@ -148,6 +185,7 @@ export function SplitPreview({ postId, title, platform, content, htmlContent, ex
           <div className="content">
             {currentHtml ? (
               <div
+                ref={previewRef}
                 className="markdown-body"
                 dangerouslySetInnerHTML={{ __html: currentHtml }}
               />

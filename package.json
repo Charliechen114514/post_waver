@@ -26,6 +26,7 @@
     "scan:table": "npx tsx scripts/scan.ts --dir content/posts --output table",
     "scan:drafts": "npx tsx scripts/scan.ts --dir content/posts --include-drafts --output table",
     "index:rebuild": "npx tsx scripts/scan.ts --dir content/posts --include-drafts",
+    "inject:links": "npx tsx scripts/inject-links.ts",
     "sync:hexo": "npx tsx scripts/sync-to-hexo.ts",
     "sync:blog": "bash scripts/update-blog.sh",
     "python:install": "cd packages/linker && pip3 install -r requirements.txt",

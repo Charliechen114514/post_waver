@@ -318,7 +318,7 @@ export class FullPublishPipeline {
         if (options.includeRelatedLinks !== false) {
           console.log(`\n🔗 [DEBUG] 开始应用相关链接...`)
           try {
-            const { injectRelatedLinks } = await import('@content-hub/core')
+            const { injectRelatedLinks, injectRelatedLinksWithPlatform } = await import('@content-hub/core')
             const { prisma } = await import('@content-hub/database')
 
             // 获取文章索引
@@ -374,13 +374,42 @@ export class FullPublishPipeline {
               const beforeLength = originalContent.length
               const beforeWechatLength = wechatContent.length
 
-              originalContent = injectRelatedLinks(originalContent, currentPost, postsMap)
-              wechatContent = injectRelatedLinks(wechatContent, currentPost, postsMap)  // 🔧 修复：微信也应用相关链接
+              // 为掘金平台注入相关链接（使用掘金真实URL）
+              console.log(`\n  🔗 [掘金平台] 开始应用平台真实 URL...`)
+              try {
+                originalContent = await injectRelatedLinksWithPlatform(
+                  originalContent,
+                  currentPost,
+                  postsMap,
+                  'juejin'
+                )
+                console.log(`    ✅ 掘金平台相关链接已应用（使用平台真实 URL）`)
+              } catch (error) {
+                console.warn(`    ⚠️ 掘金平台 URL 查询失败，使用降级方案（Hexo 格式）:`, error)
+                // 降级：使用原始链接格式
+                originalContent = injectRelatedLinks(originalContent, currentPost, postsMap)
+              }
+
+              // 为微信平台注入相关链接（使用微信真实URL）
+              console.log(`\n  🔗 [微信平台] 开始应用平台真实 URL...`)
+              try {
+                wechatContent = await injectRelatedLinksWithPlatform(
+                  wechatContent,
+                  currentPost,
+                  postsMap,
+                  'wechat'
+                )
+                console.log(`    ✅ 微信平台相关链接已应用（使用平台真实 URL）`)
+              } catch (error) {
+                console.warn(`    ⚠️ 微信平台 URL 查询失败，使用降级方案（Hexo 格式）:`, error)
+                // 降级：使用原始链接格式
+                wechatContent = injectRelatedLinks(wechatContent, currentPost, postsMap)
+              }
 
               const afterLength = originalContent.length
               const afterWechatLength = wechatContent.length
 
-              console.log(`  ✅ 已应用相关链接`)
+              console.log(`\n  ✅ 相关链接处理完成`)
               console.log(`  掘金: ${beforeLength} → ${afterLength} (+${afterLength - beforeLength})`)
               console.log(`  微信: ${beforeWechatLength} → ${afterWechatLength} (+${afterWechatLength - beforeWechatLength})`)
             } else {

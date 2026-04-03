@@ -259,12 +259,33 @@ export async function createAPIServer(options: {
 
       let filepath = post.currentPath || post.originalPath
       if (!filepath) {
-        const testPath = path.join(process.cwd(), 'content/posts', `${id}.md`)
-        try {
-          await fs.access(testPath)
-          filepath = testPath
-        } catch {
-          return c.json({ error: '文章文件不存在' }, 404)
+        // 尝试多个可能的路径
+        const possiblePaths = [
+          path.join(process.cwd(), 'content/posts', `${id}.md`),
+          path.join(process.cwd(), 'content/posts', id, 'index.md'),
+          path.join(process.cwd(), 'content/done', `${id}.md`),
+          path.join(process.cwd(), 'content/done', id, 'index.md'),
+          path.join(process.cwd(), 'content/test', `${id}.md`),
+        ]
+
+        for (const testPath of possiblePaths) {
+          try {
+            await fs.access(testPath)
+            filepath = testPath
+            console.log(`✅ 找到文章文件: ${filepath}`)
+            break
+          } catch {
+            // 继续尝试下一个路径
+          }
+        }
+
+        if (!filepath) {
+          console.error(`❌ 文章文件未找到，已尝试以下路径:`, possiblePaths)
+          return c.json({
+            error: '文章文件不存在',
+            message: '文章可能在其他目录或已被删除',
+            hint: '尝试刷新页面或重新扫描文章'
+          }, 404)
         }
       }
 
@@ -317,7 +338,7 @@ export async function createAPIServer(options: {
       // 应用相关链接（如果启用）
       if (includeRelatedLinks) {
         try {
-          const { injectRelatedLinks } = await import('@content-hub/core')
+          const { injectRelatedLinksWithPlatform } = await import('@content-hub/core')
           const { prisma } = await import('@content-hub/database')
 
           // 获取文章的索引信息
@@ -360,9 +381,17 @@ export async function createAPIServer(options: {
               related: contentIndex.related ? JSON.parse(contentIndex.related) : []
             }
 
-            // 注入相关链接
-            useContent = injectRelatedLinks(useContent, currentPost, postsMap)
-            console.log(`✅ 已应用相关链接`)
+            // 使用平台真实URL注入相关链接
+            console.log(`\n🔗 [Preview API] 为 ${platform} 平台应用相关链接...`)
+            try {
+              useContent = await injectRelatedLinksWithPlatform(useContent, currentPost, postsMap, platform)
+              console.log(`  ✅ ${platform} 平台相关链接已应用（使用平台真实 URL）`)
+            } catch (error) {
+              console.warn(`  ⚠️ ${platform} 平台URL查询失败，使用降级方案:`, error)
+              // 降级：使用原始链接格式
+              const { injectRelatedLinks } = await import('@content-hub/core')
+              useContent = injectRelatedLinks(useContent, currentPost, postsMap, ':year/:month/:day/:title/', true)
+            }
           }
         } catch (error) {
           console.warn('应用相关链接失败:', error)

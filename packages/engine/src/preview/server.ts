@@ -259,6 +259,22 @@ export async function createPreviewServer(getPreviewContent: (id: string, platfo
     }
   })
 
+  // 处理 Hexo 风格的链接跳转（重定向到预览页面）
+  app.get('/:year/:month/:day/:id/', async (c) => {
+    const { year, month, day, id } = c.req.param()
+
+    // 移除末尾的斜杠（如果有）
+    const cleanId = id.replace(/\/$/, '')
+
+    // 构建预览 URL
+    const previewUrl = `/preview/html/${cleanId}`
+
+    console.log(`📎 相关链接跳转: ${year}/${month}/${day}/${cleanId} -> ${previewUrl}`)
+
+    // 重定向到预览页面
+    return c.redirect(previewUrl)
+  })
+
   // 主预览端点 - 支持包含斜杠的文件路径
   app.get('/preview/:platform/:id', async (c) => {
     const { platform, id } = c.req.param()

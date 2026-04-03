@@ -188,10 +188,29 @@ export class FileMover {
       throw new Error(`Done 文件不存在: ${sourcePath}`)
     }
 
-    // 先回滚资源文件（在移动主文件之前，因为 rollbackAssets 需要读取源文件）
-    await this.rollbackAssets(postId, sourcePath)
+    // 1. 先读取源文件内容（用于资源回滚）
+    let assetPaths: string[] = []
+    try {
+      const content = await fs.readFile(sourcePath, 'utf-8')
+      const assetRegex = /!\[.*?\]\((.+?)\)/g
+      const matches = [...content.matchAll(assetRegex)]
+      assetPaths = matches
+        .map(m => m[1])
+        .filter(p => !p.startsWith('http') && !p.startsWith('data:'))
+    } catch (error) {
+      console.warn(`  ⚠️  无法读取源文件内容:`, error)
+    }
 
-    // 再移动主文件
+    // 2. 回滚资源文件（使用预提取的路径）
+    // 如果资源回滚失败，抛出错误，阻止主文件移动
+    try {
+      await this.rollbackAssets(assetPaths)
+    } catch (error) {
+      console.error(`❌ 资源回滚失败，取消主文件移动以保持状态一致`)
+      throw new Error(`资源回滚失败: ${error}`)
+    }
+
+    // 3. 移动主文件
     await fs.rename(sourcePath, targetPath)
 
     console.log(`✅ 文件已回滚: ${sourcePath} → ${targetPath}`)
@@ -214,29 +233,22 @@ export class FileMover {
   /**
    * 回滚资源文件
    */
-  private async rollbackAssets(postId: string, markdownPath: string): Promise<void> {
+  private async rollbackAssets(assetPaths: string[]): Promise<void> {
     try {
-      // 如果源文件不存在（已经移动），跳过
-      if (!existsSync(markdownPath)) {
+      if (assetPaths.length === 0) {
+        console.log(`  ℹ️  无需回滚资源`)
         return
       }
 
-      const content = await fs.readFile(markdownPath, 'utf-8')
-      const assetRegex = /!\[.*?\]\((.+?)\)/g
-      const matches = [...content.matchAll(assetRegex)]
+      console.log(`  📎 开始回滚 ${assetPaths.length} 个资源`)
 
-      for (const match of matches) {
-        const assetPath = match[1]
-
-        // 跳过外部链接和 Base64
-        if (assetPath.startsWith('http') || assetPath.startsWith('data:')) {
-          continue
-        }
-
+      for (const assetPath of assetPaths) {
+        // 🔧 修复：资源从 content/done 回滚到 content/posts
         const sourceAssetPath = join(process.cwd(), 'content/done', assetPath)
-        const targetAssetPath = join(process.cwd(), 'content', assetPath)
+        const targetAssetPath = join(process.cwd(), 'content/posts', assetPath)
 
         if (!existsSync(sourceAssetPath)) {
+          console.warn(`  ⚠️  资源不存在: ${sourceAssetPath}`)
           continue
         }
 
@@ -249,8 +261,11 @@ export class FileMover {
         console.log(`  ✅ 资源已回滚: ${assetPath}`)
       }
 
+      console.log(`  ✅ 资源回滚完成`)
+
     } catch (error) {
-      console.error(`  ⚠️  回滚资源时出错:`, error)
+      console.error(`  ❌ 回滚资源时出错:`, error)
+      throw error  // 抛出错误，让调用者知道回滚失败
     }
   }
 }

@@ -9,6 +9,12 @@ interface JobOutputs {
   includeRelatedLinks?: boolean
 }
 
+interface PlatformUrlData {
+  postId: string
+  url: string
+  publishedAt: string
+}
+
 interface JobStatus {
   jobId: string
   postId: string
@@ -48,6 +54,12 @@ export function GridLayout({ postId, job }: GridLayoutProps) {
   const [editingPlatform, setEditingPlatform] = useState<string | null>(null)
   const [newUrl, setNewUrl] = useState('')
 
+  // 文章的平台 URL 数据
+  const [postPlatformUrls, setPostPlatformUrls] = useState<Record<string, PlatformUrlData>>({})
+  const [showPostUrlDialog, setShowPostUrlDialog] = useState(false)
+  const [editingPostUrlPlatform, setEditingPostUrlPlatform] = useState<string | null>(null)
+  const [newPostUrl, setNewPostUrl] = useState('')
+
   // 加载微信主题
   useEffect(() => {
     const loadWeChatThemes = async () => {
@@ -79,6 +91,22 @@ export function GridLayout({ postId, job }: GridLayoutProps) {
     }
     loadPlatformUrls()
   }, []) // 空依赖数组，只在组件挂载时加载一次
+
+  // 加载文章的平台 URL（只加载一次）
+  useEffect(() => {
+    const loadPostPlatformUrls = async () => {
+      try {
+        const response = await fetch(`/api/posts/${postId}/platform-urls`)
+        const data = await response.json()
+        if (data.success) {
+          setPostPlatformUrls(data.data || {})
+        }
+      } catch (error) {
+        console.error('获取文章平台 URL 失败:', error)
+      }
+    }
+    loadPostPlatformUrls()
+  }, [postId]) // postId 改变时重新加载
 
   // 当任务完成时，获取各平台内容
   useEffect(() => {
@@ -120,9 +148,25 @@ export function GridLayout({ postId, job }: GridLayoutProps) {
             if (data.html) {
               setHtmlContents(prev => ({ ...prev, [platform.platform]: data.html }))
             }
+
+            // 显示成功提示
+            if (response.status === 200 && data.hint) {
+              showToast(data.hint, 'success')
+            }
+          } else {
+            // 处理错误情况
+            console.error(`获取 ${platform.name} 内容失败:`, data.error)
+
+            if (response.status === 404) {
+              // 文章已发布，提示用户
+              showToast(`📄 文章已发布到 done 目录，已从发布目录加载`, 'success')
+            } else {
+              showToast(`获取 ${platform.name} 内容失败: ${data.error || '未知错误'}`, 'error')
+            }
           }
         } catch (error) {
           console.error(`获取 ${platform.name} 内容失败:`, error)
+          showToast(`网络错误，请检查API服务器是否运行`, 'error')
         } finally {
           setLoading(prev => ({ ...prev, [platform.platform]: false }))
         }
@@ -190,6 +234,46 @@ export function GridLayout({ postId, job }: GridLayoutProps) {
       }
     } catch (error) {
       showToast(`清除 URL 失败: ${error instanceof Error ? error.message : String(error)}`, 'error')
+    }
+  }
+
+  // 文章平台 URL 处理函数
+  const handleSetPostUrl = (platform: string) => {
+    setEditingPostUrlPlatform(platform)
+    setNewPostUrl(postPlatformUrls[platform]?.url || '')
+    setShowPostUrlDialog(true)
+  }
+
+  const handleSavePostUrl = async () => {
+    if (!editingPostUrlPlatform) return
+
+    try {
+      const response = await fetch(`/api/posts/${postId}/platform-urls`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform: editingPostUrlPlatform,
+          url: newPostUrl
+        })
+      })
+
+      if (response.ok) {
+        setPostPlatformUrls(prev => ({
+          ...prev,
+          [editingPostUrlPlatform]: {
+            postId,
+            url: newPostUrl,
+            publishedAt: new Date().toISOString()
+          }
+        }))
+        setShowPostUrlDialog(false)
+        showToast(`${editingPostUrlPlatform} 平台 URL 已保存！`, 'success')
+      } else {
+        const errorData = await response.json()
+        showToast(`保存失败: ${errorData.error || '未知错误'}`, 'error')
+      }
+    } catch (error) {
+      showToast(`保存失败: ${error instanceof Error ? error.message : String(error)}`, 'error')
     }
   }
 
@@ -311,6 +395,26 @@ export function GridLayout({ postId, job }: GridLayoutProps) {
                       >
                         👁️ 预览
                       </button>
+
+                      {/* 文章平台 URL 管理 */}
+                      {postPlatformUrls[platform.platform] ? (
+                        <button
+                          className="btn btn-success"
+                          onClick={() => window.open(postPlatformUrls[platform.platform].url, '_blank')}
+                          title="已发布，点击查看"
+                        >
+                          ✅ 已发布
+                        </button>
+                      ) : (
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => handleSetPostUrl(platform.platform)}
+                          title="注册发布后的文章 URL"
+                        >
+                          🔗 注册 URL
+                        </button>
+                      )}
+
                       {platformUrls[platform.platform] ? (
                         <>
                           <button
@@ -403,6 +507,37 @@ export function GridLayout({ postId, job }: GridLayoutProps) {
               )}
               <button className="btn btn-primary" onClick={handleSaveUrl}>
                 保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 文章平台 URL 设置对话框 */}
+      {showPostUrlDialog && (
+        <div className="url-dialog-overlay" onClick={() => setShowPostUrlDialog(false)}>
+          <div className="url-dialog" onClick={e => e.stopPropagation()}>
+            <h3>🔗 注册文章发布 URL</h3>
+            <p>请输入文章发布到 {editingPostUrlPlatform} 平台后的真实 URL:</p>
+            <input
+              type="text"
+              value={newPostUrl}
+              onChange={e => setNewPostUrl(e.target.value)}
+              placeholder="例如: https://juejin.cn/post/7123456789012345"
+              className="url-input"
+            />
+            <div className="url-presets">
+              <span className="preset-label">提示：</span>
+              <span style={{ fontSize: '13px', color: '#666' }}>
+                发布文章后，将平台返回的真实 URL 填入此处。这将用于相关文章链接。
+              </span>
+            </div>
+            <div className="dialog-actions">
+              <button className="btn btn-secondary" onClick={() => setShowPostUrlDialog(false)}>
+                取消
+              </button>
+              <button className="btn btn-primary" onClick={handleSavePostUrl}>
+                💾 保存
               </button>
             </div>
           </div>
