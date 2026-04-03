@@ -21,7 +21,7 @@ export async function disconnectStatusTransition() {
 }
 
 export class StatusTransitionService {
-  private static transitions: Record<PostStatus, PostStatus[]> = {
+  private static transitions: Record<string, string[]> = {
     draft: ['previewing', 'archived'],
     previewing: ['draft', 'publishing', 'archived'],
     publishing: ['previewing', 'published', 'archived'],
@@ -41,7 +41,7 @@ export class StatusTransitionService {
    * 获取所有允许的状态转换
    */
   static getAllowedTransitions(from: PostStatus): PostStatus[] {
-    return this.transitions[from] || []
+    return (this.transitions[from] || []) as PostStatus[]
   }
 
   /**

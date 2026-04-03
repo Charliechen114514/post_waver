@@ -2,8 +2,23 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-export type PostStatus = 'draft' | 'previewing' | 'publishing' | 'published' | 'archived'
-export type WorkflowStatus = 'pending' | 'processing' | 'done'
+export const PostStatus = {
+  DRAFT: 'draft',
+  PREVIEWING: 'previewing',
+  PUBLISHING: 'publishing',
+  PUBLISHED: 'published',
+  ARCHIVED: 'archived'
+} as const
+
+export type PostStatus = typeof PostStatus[keyof typeof PostStatus]
+
+export const WorkflowStatus = {
+  PENDING: 'pending',
+  PROCESSING: 'processing',
+  DONE: 'done'
+} as const
+
+export type WorkflowStatus = typeof WorkflowStatus[keyof typeof WorkflowStatus]
 
 export interface PostStatusUpdate {
   postId: string

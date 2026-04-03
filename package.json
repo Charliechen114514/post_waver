@@ -4,7 +4,8 @@
   "private": true,
   "description": "本地优先的内容管理系统",
   "scripts": {
-    "dev": "tsx scripts/dev.ts",
+    "dev": "pnpm build && pnpm dev:api",
+    "start": "pnpm dev:api",
     "dev:safe": "bash scripts/dev-safe.sh",
     "dev:web": "pnpm --filter web-ui dev",
     "dev:api": "bash scripts/start-api-safe.sh",
@@ -91,7 +92,9 @@
     "title:injector:test": "tsx scripts/title-injector-test.ts",
     "verify:related-links": "bash scripts/verify-related-links.sh",
     "test:comprehensive": "bash scripts/test-comprehensive.sh",
-    "verify:db": "bash scripts/verify-db.sh"
+    "verify:db": "bash scripts/verify-db.sh",
+    "dev:converter": "pnpm --filter @content-hub/converter-web dev",
+    "build:converter": "pnpm --filter @content-hub/converter-web build"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

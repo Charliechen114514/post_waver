@@ -1,51 +1,95 @@
-import { markdownToHTML, MarkdownToHTMLOptions } from './to-html.js'
-import { generatePlatformLinks, formatLinksAsHTML } from '@content-hub/core'
-import type { IndexedPost } from '@content-hub/core'
+import { unified } from 'unified'
+import remarkParse from 'remark-parse'
+import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import remarkRehype from 'remark-rehype'
+import rehypeStringify from 'rehype-stringify'
+import rehypeRaw from 'rehype-raw'
+import rehypeKatex from 'rehype-katex'
+import rehypeHighlight from 'rehype-highlight'
 import juice from 'juice'
+import { getThemeCSS } from './themes'
 
-/**
- * 微信转换器选项
- */
-export interface WechatTransformOptions {
-  /** 文章ID */
-  postId?: string
-  /** 相关文章列表 */
-  relatedPosts?: IndexedPost[]
-  /** 博客基础URL */
-  blogBaseUrl?: string
-  /** 是否添加相关文章链接 */
-  includeRelatedLinks?: boolean
-  /** 是否移除本地图片（用于复制到外部平台） */
-  removeLocalImages?: boolean
-  /** 主题名称 */
-  theme?: string
+export type Platform = 'html' | 'wechat' | 'juejin' | 'csdn' | 'zhihu'
+
+export interface TransformResult {
+  html: string
+  text?: string
 }
 
 /**
- * 将 Markdown 转换为微信公众号格式的 HTML（带内联样式）
- * 使用 Juice 库将 CSS 内联化，确保兼容性
+ * 将本地图片路径转换为占位符
  */
-export async function transformForWechat(
-  markdown: string,
-  options?: WechatTransformOptions
-): Promise<string> {
-  const htmlOptions: MarkdownToHTMLOptions = {
-    removeLocalImages: options?.removeLocalImages
-  }
-  let html = await markdownToHTML(markdown, htmlOptions)
+function processLocalImages(html: string): string {
+  return html.replace(
+    /<img([^>]*\s)src=(["'])\/assets\/([^"']+)\2([^>]*)>/gi,
+    (_match, _before, _quote, filename, _after) => {
+      const displayName = filename.split('/').pop() || filename
+      return `<p style="color: #999; background: #f5f5f5; padding: 10px; border: 1px dashed #ccc; text-align: center; margin: 10px 0;">📷 图片: ${displayName} (请手动上传)</p>`
+    }
+  )
+}
 
-  // 如果提供了相关文章信息，生成平台链接HTML
-  let relatedLinksHTML = ''
-  if (options?.includeRelatedLinks && options.postId && options.relatedPosts) {
-    const links = generatePlatformLinks(options.postId, options.relatedPosts, {
-      platform: 'wechat',
-      blogBaseUrl: options.blogBaseUrl || 'https://your-blog.github.io/'
+/**
+ * 将 Markdown 转换为标准 HTML
+ */
+export async function markdownToHTML(markdown: string, removeLocalImages = false): Promise<string> {
+  const result = await unified()
+    .use(remarkParse)
+    .use(remarkGfm)
+    .use(remarkMath, {
+      singleDollarTextMath: true,
     })
-    relatedLinksHTML = formatLinksAsHTML(links, 'wechat')
+    .use(remarkRehype, { allowDangerousHtml: true })
+    .use(rehypeRaw)
+    .use(rehypeKatex)
+    .use(rehypeHighlight)
+    .use(rehypeStringify)
+    .process(markdown)
+
+  let html = String(result)
+
+  // 修复相对路径图片
+  html = html.replace(
+    /<img([^>]*\s)src=(["'])(?!https?:\/\/|\/\/)([^"']*?\.(png|jpg|jpeg|gif|svg|webp))\2([^>]*)>/gi,
+    (_match, before, quote, src, _ext, after) => {
+      const absoluteSrc = src.startsWith('/') ? src : `/${src}`
+      return `<img${before}src=${quote}${absoluteSrc}${quote}${after}>`
+    }
+  )
+
+  // 如果需要移除本地图片（用于复制到外部平台）
+  if (removeLocalImages) {
+    html = processLocalImages(html)
   }
+
+  // 添加 KaTeX CSS 样式
+  const katexResources = `
+<!-- KaTeX 基础样式 -->
+<link rel="stylesheet" href="/post_waver/converter/katex-base.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">`
+
+  return katexResources + html
+}
+
+/**
+ * 将 Markdown 转换为微信公众号格式的 HTML
+ * 使用 Juice 库将 CSS 内联化，确保兼容性
+ * 支持主题样式
+ */
+export async function transformForWechat(markdown: string, removeLocalImages = false, theme = 'orangeheart'): Promise<string> {
+  const html = await markdownToHTML(markdown, removeLocalImages)
 
   // 移除 KaTeX CSS 链接（不需要）
   const cleanedHtml = html.replace(/<link[^>]*katex[^>]*>/gi, '')
+
+  // 加载主题 CSS
+  let themeCSS = ''
+  try {
+    themeCSS = await getThemeCSS(theme)
+  } catch (error) {
+    console.warn(`Failed to load theme ${theme}:`, error)
+  }
 
   // 准备完整的 HTML 文档，包含 CSS 样式
   const fullHtml = `
@@ -63,7 +107,7 @@ export async function transformForWechat(
           word-wrap: break-word;
         }
 
-        /* 标题样式 */
+        /* 标题样式 - 白色背景 */
         .markdown-body h1,
         .markdown-body h2,
         .markdown-body h3,
@@ -110,7 +154,7 @@ export async function transformForWechat(
         .markdown-body p {
           margin-top: 0;
           margin-bottom: 16px;
-          background: #ffffff !important;
+          background: #ffffff;
         }
 
         /* 列表样式 */
@@ -131,7 +175,7 @@ export async function transformForWechat(
           overflow: auto;
           font-size: 85%;
           line-height: 1.45;
-          background-color: #ffffff !important;
+          background-color: #ffffff;
           border-radius: 6px;
           margin-bottom: 16px;
           border: 1px solid #e1e4e8;
@@ -141,7 +185,7 @@ export async function transformForWechat(
           padding: 0;
           margin: 0;
           font-size: 100%;
-          background: transparent !important;
+          background: transparent;
         }
 
         /* 行内代码样式 - 白色背景 */
@@ -149,23 +193,23 @@ export async function transformForWechat(
           padding: 0.2em 0.4em;
           margin: 0;
           font-size: 85%;
-          background-color: #ffffff !important;
+          background-color: #ffffff;
           border-radius: 6px;
           font-family: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
         }
 
         .markdown-body p code {
-          background-color: #ffffff !important;
+          background-color: #ffffff;
           padding: 2px 6px;
         }
 
-        /* 引用样式 - 白色背景 */
+        /* 引用样式 */
         .markdown-body blockquote {
           margin: 0 0 16px;
           padding: 0 1em;
           color: #6a737d;
           border-left: 0.25em solid #dfe2e5;
-          background: #ffffff !important;
+          background: #ffffff;
         }
 
         .markdown-body blockquote > :first-child {
@@ -231,6 +275,9 @@ export async function transformForWechat(
           overflow-x: auto;
           overflow-y: hidden;
         }
+
+        /* 主题样式 */
+        ${themeCSS}
       </style>
     </head>
     <body>
@@ -259,17 +306,40 @@ export async function transformForWechat(
 
     // 移除外层 div 容器，保留内部的 styled HTML
     const divMatch = content.match(/<div class="markdown-body"([^>]*)>([\s\S]*?)<\/div>/i)
-    const result = divMatch ? divMatch[2] : content
-
-    // 添加相关文章链接（如果有的话）
-    if (relatedLinksHTML) {
-      return result + '\n\n' + relatedLinksHTML
-    }
-
-    return result
+    return divMatch ? divMatch[2] : content
   } catch (error) {
     console.error('Juice inline error:', error)
     // 如果 Juice 失败，返回原始 HTML
     return cleanedHtml
+  }
+}
+
+export async function transformMarkdown(
+  markdown: string,
+  platform: Platform,
+  theme?: string
+): Promise<TransformResult> {
+  try {
+    switch (platform) {
+      case 'html':
+        const html = await markdownToHTML(markdown)
+        return { html, text: markdown }
+
+      case 'wechat':
+        const wechatHtml = await transformForWechat(markdown, true, theme)
+        return { html: wechatHtml, text: markdown }
+
+      case 'juejin':
+      case 'csdn':
+      case 'zhihu':
+        const previewHtml = await markdownToHTML(markdown, false)
+        return { html: previewHtml, text: markdown }
+
+      default:
+        throw new Error(`Unsupported platform: ${platform}`)
+    }
+  } catch (error) {
+    console.error('Transform error:', error)
+    throw error
   }
 }

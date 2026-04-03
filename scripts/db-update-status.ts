@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 import { StatusTransitionService } from '../packages/database/dist/services/status-transition.js'
-import { PostStatus } from '../packages/database/dist/dal/post.js'
+import type { PostStatus } from '../packages/database/dist/dal/post.js'
 
 async function main() {
   const postId = process.argv[2]

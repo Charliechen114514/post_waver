@@ -1,0 +1,31 @@
+.copy-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.2s;
+  background: #667eea;
+  color: white;
+}
+
+.copy-button:hover:not(.disabled) {
+  background: #5568d3;
+}
+
+.copy-button:disabled,
+.copy-button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.copy-button.copied {
+  background: #22c55e;
+}
+
+.copy-button.copied:hover {
+  background: #16a34a;
+}

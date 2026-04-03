@@ -13,7 +13,16 @@
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "declaration": true,
-    "declarationMap": true
+    "declarationMap": true,
+    "paths": {
+      "@content-hub/core": ["./packages/core/src"],
+      "@content-hub/database": ["./packages/database/src"],
+      "@content-hub/linker": ["./packages/linker/src"],
+      "@content-hub/transformer": ["./packages/transformer/src"],
+      "@content-hub/config": ["./packages/config/src"],
+      "@content-hub/engine": ["./packages/engine/src"],
+      "@content-hub/converter-web": ["./packages/converter-web/src"]
+    }
   },
   "exclude": ["node_modules", "dist"]
 }

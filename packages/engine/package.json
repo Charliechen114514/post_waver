@@ -17,7 +17,7 @@
   "scripts": {
     "build": "tsc && npm run copy-assets",
     "dev": "tsc --watch",
-    "copy-assets": "rm -rf dist/preview/themes && cp -r src/preview/themes dist/preview/themes",
+    "copy-assets": "mkdir -p dist/preview && cp -r src/preview/themes dist/preview/themes",
     "clean": "rm -rf dist"
   },
   "dependencies": {

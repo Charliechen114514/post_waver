@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import './CopyButton.css'
+import '../styles/CopyButton.css'
 
 interface CopyButtonProps {
   /** 要复制的内容 */
@@ -92,42 +92,54 @@ async function copyToClipboard(content: string): Promise<void> {
 }
 
 /**
- * 复制渲染后的 DOM 树到剪贴板（用于微信公众号等平台）
- * 这会保留所有样式效果，而不是复制 HTML 源码
+ * 复制富文本到剪贴板（用于微信公众号等平台）
+ * 使用 text/html 格式，确保样式被正确保留
  */
-async function copyRichTextToClipboard(html: string, _fallbackText: string): Promise<void> {
-  // 创建一个隐藏的容器来渲染 HTML，设置白色背景避免继承页面背景
-  const container = document.createElement('div')
-  container.style.position = 'absolute'
-  container.style.left = '-9999px'
-  container.style.top = '0'
-  container.style.backgroundColor = '#ffffff' // 明确设置白色背景
-  container.style.padding = '0'
-  container.style.margin = '0'
-  container.innerHTML = html
-  document.body.appendChild(container)
+async function copyRichTextToClipboard(html: string, fallbackText: string): Promise<void> {
+  // 创建一个隐藏的 input 元素用于触发复制事件
+  let input = document.getElementById('copy-placeholder') as HTMLInputElement | null
 
-  try {
-    // 使用 Selection API 复制渲染后的 DOM
-    const range = document.createRange()
-    range.selectNodeContents(container)
+  if (!input) {
+    input = document.createElement('input')
+    input.id = 'copy-placeholder'
+    input.style.position = 'absolute'
+    input.style.left = '-1000px'
+    input.style.zIndex = '-1000'
+    document.body.appendChild(input)
+  }
 
-    const selection = window.getSelection()
-    if (!selection) throw new Error('无法获取选区')
+  // 让 input 选中一个字符，无所谓那个字符
+  input.value = 'copy-placeholder'
+  input.setSelectionRange(0, 1)
+  input.focus()
 
-    selection.removeAllRanges()
-    selection.addRange(range)
+  return new Promise<void>((resolve, reject) => {
+    // 复制触发
+    const copyHandler = (e: ClipboardEvent) => {
+      e.preventDefault()
+
+      const clipboardData = e.clipboardData
+      if (!clipboardData) {
+        reject(new Error('无法访问剪贴板数据'))
+        return
+      }
+
+      // 设置 HTML 格式（富文本）
+      clipboardData.setData('text/html', html)
+      // 设置纯文本格式（兼容性）
+      clipboardData.setData('text/plain', fallbackText)
+
+      document.removeEventListener('copy', copyHandler)
+      resolve()
+    }
+
+    document.addEventListener('copy', copyHandler)
 
     // 执行复制命令
     const successful = document.execCommand('copy')
     if (!successful) {
-      throw new Error('复制命令执行失败')
+      document.removeEventListener('copy', copyHandler)
+      reject(new Error('复制命令执行失败'))
     }
-
-    // 清除选区
-    selection.removeAllRanges()
-  } finally {
-    // 移除临时容器
-    document.body.removeChild(container)
-  }
+  })
 }

@@ -90,6 +90,106 @@ pnpm sync:blog
 
 ---
 
+## ⚡ Quick Build & Run
+
+### 📦 Build the Project
+
+```bash
+# First time setup - install dependencies
+pnpm install
+
+# Generate Prisma Client (required for database operations)
+pnpm prisma generate
+
+# Build all packages
+pnpm build
+```
+
+**Build Process**:
+- Compiles TypeScript → JavaScript
+- Creates `dist/` directories in each package
+- Copies static assets (themes, templates)
+- Takes ~30-60 seconds on first run
+
+### 🚀 Start Development Servers
+
+**Full startup (build + start):**
+```bash
+pnpm dev
+```
+
+**Quick startup (skip build if already compiled):**
+```bash
+pnpm start
+```
+
+**Individual services:**
+```bash
+pnpm dev:web    # Start only Web UI (port 5173)
+pnpm dev:api    # Start API server + Web UI (port 3001 + 5173)
+```
+
+### 📋 Service URLs
+
+After starting, you can access:
+
+- **Web UI**: http://localhost:5173/post_waver/
+- **API Server**: http://localhost:3001/api/
+- **API Health Check**: http://localhost:3001/api/health
+
+### 🔄 Development Workflow
+
+**Morning routine:**
+```bash
+pnpm start    # Quick start, uses already compiled code
+```
+
+**After code changes:**
+```bash
+pnpm build    # Recompile modified packages
+pnpm start    # Restart services
+```
+
+**Full clean rebuild:**
+```bash
+pnpm clean        # Remove all dist/ directories
+pnpm install      # Reinstall dependencies
+pnpm prisma generate  # Regenerate Prisma Client
+pnpm build        # Rebuild all packages
+pnpm start        # Start services
+```
+
+### ⚠️ Common Issues
+
+**Module not found errors:**
+```bash
+# Solution: Reinstall dependencies
+rm -rf node_modules scripts/node_modules
+pnpm install
+```
+
+**Prisma errors:**
+```bash
+# Solution: Regenerate Prisma Client
+pnpm prisma generate
+```
+
+**Port already in use:**
+```bash
+# Solution: Stop existing processes
+lsof -ti :3001 | xargs kill -9    # Clear API port
+lsof -ti :5173 | xargs kill -9    # Clear Web UI port
+```
+
+**Build failures:**
+```bash
+# Solution: Clean build
+pnpm clean
+pnpm build
+```
+
+---
+
 ## 📁 Project Structure
 
 ```
@@ -110,20 +210,46 @@ post_waver/
 
 ## 🛠️ Available Commands
 
+### 🚀 Quick Start Commands
+
 ```bash
-# Development
-pnpm dev              # Start web-ui dev server
+pnpm dev              # Build all + Start API & Web UI
+pnpm start            # Start API & Web UI (skip build)
+pnpm dev:web          # Start Web UI only
+pnpm dev:api          # Start API server + Web UI
+```
+
+### 🔧 Build Commands
+
+```bash
 pnpm build            # Build all packages
-pnpm test             # Run tests
+pnpm clean            # Remove all dist/ directories
+pnpm typecheck        # Type check without building
+```
 
-# Content Management
+### 📝 Content Management
+
+```bash
 pnpm scan             # Scan and index content
+pnpm scan:drafts      # Scan including drafts
+pnpm inject:links     # Inject related article links
 pnpm sync:blog        # Sync content to Hexo blog
+```
 
-# Quality
+### 🧪 Quality & Testing
+
+```bash
 pnpm lint             # Lint code
 pnpm lint:fix         # Fix linting issues
-pnpm typecheck        # Type check TypeScript
+pnpm test             # Run tests
+```
+
+### 🗄️ Database Commands
+
+```bash
+pnpm db:init          # Initialize database (generate Prisma Client)
+pnpm db:studio        # Open Prisma Studio (database GUI)
+pnpm post:status      # Check post status in database
 ```
 
 ---
