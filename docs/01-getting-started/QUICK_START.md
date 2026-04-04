@@ -38,11 +38,27 @@ cd post_waver
 # 2. 安装依赖
 pnpm install
 
-# 3. 构建项目
-pnpm build
+# 3. 配置环境变量
+cat > .env << 'EOF'
+# Database
+DATABASE_URL="file:./packages/database/prisma/dev.db"
 
-# 4. 初始化数据库
+# API Configuration
+API_PORT=3001
+API_HOST=localhost
+
+# Environment
+NODE_ENV=development
+EOF
+
+# 4. 初始化数据库（生成 Prisma Client）
 pnpm db:init
+
+# 5. 运行数据库迁移（创建数据库文件）
+pnpm db:migrate:prisma
+
+# 6. 构建项目
+pnpm build
 ```
 
 > **💡 数据存储说明**  

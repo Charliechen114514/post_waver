@@ -164,19 +164,46 @@ pnpm install
 
 ---
 
-### 6. 初始化数据库
+### 6. 配置环境变量
 
 ```bash
-# 生成 Prisma Client
-pnpm prisma generate
+# 复制示例配置文件（如果存在）
+cp .env.example .env
 
-# 运行数据库迁移
+# 或者创建新的 .env 文件
+cat > .env << 'EOF'
+# Database
+DATABASE_URL="file:./packages/database/prisma/dev.db"
+
+# API Configuration
+API_PORT=3001
+API_HOST=localhost
+
+# Environment
+NODE_ENV=development
+EOF
+```
+
+> **⚠️ 重要**: `.env` 文件用于本地开发配置，包含敏感信息，已被添加到 `.gitignore` 中不会被提交。
+
+### 7. 初始化数据库
+
+```bash
+# 初始化数据库（生成 Prisma Client 并运行迁移）
+pnpm db:init
+
+# 运行数据库迁移（创建数据库文件和表结构）
 pnpm db:migrate:prisma
 ```
 
+> **💡 说明**: 
+> - `pnpm db:init` 生成 Prisma Client（TypeScript 类型定义）
+> - `pnpm db:migrate:prisma` 创建 SQLite 数据库文件并运行所有迁移
+> - 迁移会自动导入初始配置数据
+
 ---
 
-### 7. 构建项目
+### 8. 构建项目
 
 ```bash
 # 构建所有包
@@ -187,7 +214,7 @@ pnpm build
 
 ---
 
-### 8. 验证安装
+### 9. 验证安装
 
 ```bash
 # 启动服务

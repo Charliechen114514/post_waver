@@ -31,6 +31,25 @@ cd post_waver
 
 # Install dependencies
 pnpm install
+
+# Configure environment variables
+cat > .env << 'EOF'
+# Database
+DATABASE_URL="file:./packages/database/prisma/dev.db"
+
+# API Configuration
+API_PORT=3001
+API_HOST=localhost
+
+# Environment
+NODE_ENV=development
+EOF
+
+# Initialize database (generate Prisma Client)
+pnpm db:init
+
+# Run database migrations (create database file)
+pnpm db:migrate:prisma
 ```
 
 ### Initialize Your Blog
@@ -98,8 +117,19 @@ pnpm sync:blog
 # First time setup - install dependencies
 pnpm install
 
-# Generate Prisma Client (required for database operations)
-pnpm prisma generate
+# Configure environment variables
+cat > .env << 'EOF'
+DATABASE_URL="file:./packages/database/prisma/dev.db"
+API_PORT=3001
+API_HOST=localhost
+NODE_ENV=development
+EOF
+
+# Initialize database
+pnpm db:init
+
+# Run database migrations (create database file)
+pnpm db:migrate:prisma
 
 # Build all packages
 pnpm build
@@ -152,11 +182,12 @@ pnpm start    # Restart services
 
 **Full clean rebuild:**
 ```bash
-pnpm clean        # Remove all dist/ directories
-pnpm install      # Reinstall dependencies
-pnpm prisma generate  # Regenerate Prisma Client
-pnpm build        # Rebuild all packages
-pnpm start        # Start services
+pnpm clean              # Remove all dist/ directories
+pnpm install            # Reinstall dependencies
+pnpm db:init            # Regenerate Prisma Client
+pnpm db:migrate:prisma  # Recreate database if needed
+pnpm build              # Rebuild all packages
+pnpm start              # Start services
 ```
 
 ### ⚠️ Common Issues
@@ -171,7 +202,10 @@ pnpm install
 **Prisma errors:**
 ```bash
 # Solution: Regenerate Prisma Client
-pnpm prisma generate
+pnpm db:init
+
+# If database file is missing, run migrations
+pnpm db:migrate:prisma
 ```
 
 **Port already in use:**
@@ -268,9 +302,11 @@ pnpm test             # Run tests
 ### 🗄️ Database Commands
 
 ```bash
-pnpm db:init          # Initialize database (generate Prisma Client)
-pnpm db:studio        # Open Prisma Studio (database GUI)
-pnpm post:status      # Check post status in database
+pnpm db:init            # Initialize database (generate Prisma Client)
+pnpm db:migrate:prisma  # Run database migrations
+pnpm db:studio          # Open Prisma Studio (database GUI)
+pnpm db:reset           # Reset database (⚠️ deletes all data)
+pnpm post:status        # Check post status in database
 ```
 
 ---
@@ -303,6 +339,18 @@ Interested in contributing or extending PostWaver?
 git clone https://github.com/Charliechen114514/post_waver.git
 cd post_waver
 pnpm install
+
+# Configure environment
+cat > .env << 'EOF'
+DATABASE_URL="file:./packages/database/prisma/dev.db"
+API_PORT=3001
+API_HOST=localhost
+NODE_ENV=development
+EOF
+
+# Initialize database
+pnpm db:init
+pnpm db:migrate:prisma
 
 # Build all packages
 pnpm build

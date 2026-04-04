@@ -17,6 +17,59 @@ interface CopyButtonProps {
 }
 
 /**
+ * 移除 HTML details 标签，展开折叠内容
+ * 将 <details><summary>标题</summary>内容</details> 转换为：
+ * ### 标题
+ * 内容
+ */
+function removeDetailsTags(markdown: string): string {
+  return markdown.replace(
+    /<details>\s*<summary>([^<]+)<\/summary>\s*/gi,
+    (_match, summary) => {
+      // 将 summary 转换为三级标题
+      return `\n### ${summary.trim()}\n\n`
+    }
+  ).replace(
+    /<\/details>\s*/gi,
+    () => {
+      // 移除结束标签，添加一个空行
+      return '\n'
+    }
+  )
+}
+
+/**
+ * 格式化代码块，确保代码块格式正确
+ * 1. 移除 HTML details 标签
+ * 2. 确保 ```语言 后面有换行
+ * 3. 确保 ``` 结尾前后都有换行
+ */
+function formatCodeBlocks(markdown: string): string {
+  let result = removeDetailsTags(markdown)
+
+  result = result.replace(
+    /```(\w*)\s*([^\n])/g,
+    (_match, lang, firstChar) => {
+      // 如果 ``` 后面没有换行，添加换行
+      return `\`\`\`${lang}\n${firstChar}`
+    }
+  ).replace(
+    /([^\n])```(\n|$)/gm,
+    (_match, lastChar, newline) => {
+      // 确保 ``` 前后有换行
+      return `${lastChar}\n\`\`\`${newline || '\n'}`
+    }
+  )
+
+  // 确保文档以换行符结尾（如果文档包含代码块）
+  if (result.includes('```') && !result.endsWith('\n')) {
+    result += '\n'
+  }
+
+  return result
+}
+
+/**
  * 一键复制按钮组件
  */
 export function CopyButton({
@@ -41,7 +94,9 @@ export function CopyButton({
       } else if (htmlContent && _platform === 'html') {
         await copyRichTextToClipboard(htmlContent, content)
       } else {
-        await copyToClipboard(content)
+        // 对于纯文本平台（掘金、CSDN、知乎），在复制前格式化代码块
+        const formattedContent = formatCodeBlocks(content)
+        await copyToClipboard(formattedContent)
       }
       setCopied(true)
       onSuccess?.()
