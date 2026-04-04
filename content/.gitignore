@@ -13,3 +13,4 @@ assets/audio/**/*
 
 # 保留目录标记文件
 **/.gitkeep
+third_party/
