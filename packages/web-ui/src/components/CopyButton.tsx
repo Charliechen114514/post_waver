@@ -147,6 +147,38 @@ async function copyToClipboard(content: string): Promise<void> {
 }
 
 /**
+ * 修复代码块中的空白字符：将代码块中的空格替换为不间断空格
+ * 这样在复制到微信公众号时不会丢失缩进
+ */
+function preserveWhitespaceInCodeBlocks(container: HTMLElement): void {
+  // 查找所有代码块
+  const codeElements = container.querySelectorAll('pre code, code')
+  codeElements.forEach(codeElement => {
+    // 遍历所有子节点
+    const walker = document.createTreeWalker(
+      codeElement,
+      NodeFilter.SHOW_TEXT,
+      null
+    )
+
+    const textNodes: Text[] = []
+    let node: Node | null
+    while (node = walker.nextNode()) {
+      textNodes.push(node as Text)
+    }
+
+    // 将每个文本节点中的空格替换为不间断空格
+    textNodes.forEach(textNode => {
+      const text = textNode.nodeValue
+      if (text) {
+        // 将所有空格替换为不间断空格（U+00A0）
+        textNode.nodeValue = text.replace(/ /g, '\u00A0')
+      }
+    })
+  })
+}
+
+/**
  * 复制渲染后的 DOM 树到剪贴板（用于微信公众号等平台）
  * 这会保留所有样式效果，而不是复制 HTML 源码
  */
@@ -163,6 +195,9 @@ async function copyRichTextToClipboard(html: string, _fallbackText: string): Pro
   document.body.appendChild(container)
 
   try {
+    // 修复代码块中的空白字符
+    preserveWhitespaceInCodeBlocks(container)
+
     // 使用 Selection API 复制渲染后的 DOM
     const range = document.createRange()
     range.selectNodeContents(container)

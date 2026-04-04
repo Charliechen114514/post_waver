@@ -237,6 +237,25 @@ export async function scan(
 
   // 更新索引
   if (updateIndex) {
+    // 清理已删除文件的索引
+    const currentFileIds = new Set(posts.map(p => p.id))
+    const deletedIds: string[] = []
+
+    for (const [id, indexedPost] of existingIndex.entries()) {
+      if (!currentFileIds.has(id)) {
+        // 检查文件是否真的不存在
+        const { existsSync } = await import('fs')
+        if (!existsSync(indexedPost.filepath)) {
+          deletedIds.push(id)
+        }
+      }
+    }
+
+    if (deletedIds.length > 0) {
+      console.log(`[Scanner] Cleaning up ${deletedIds.length} deleted post(s) from index:`, deletedIds)
+      await ContentIndexService.deleteMany(deletedIds)
+    }
+
     const newIndex = await buildIndex(posts)
     await writeIndex(newIndex)
   }

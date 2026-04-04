@@ -52,6 +52,41 @@ export async function markdownToHTML(markdown: string, options?: MarkdownToHTMLO
 
   let html = String(result)
 
+  // 修复代码块中的空白字符：保护重要的空格，避免在复制时丢失
+  // 这个正则匹配 <pre><code> 标签内的内容
+  html = html.replace(
+    /<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi,
+    (_match, codeContent) => {
+      // 将每一行的内容进行处理
+      const preserved = codeContent
+        .split('\n')
+        .map(line => {
+          // 如果行是纯标签或空行，保持原样
+          if (!line.trim() || line.trim().startsWith('<')) {
+            return line
+          }
+
+          // 处理行内容：
+          // 1. 将前导空格转换为 &nbsp;
+          // 2. 将所有"标签后跟空格"的情况中的空格也转换为 &nbsp;
+          const leadingSpaces = line.match(/^(\s*)/)?.[1] || ''
+          const restOfLine = line.substring(leadingSpaces.length)
+
+          // 将前导空格转换为 &nbsp;
+          const nbspLeading = leadingSpaces.replace(/ /g, '&nbsp;').replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;')
+
+          // 处理剩余行内容：将标签后的空格转换为 &nbsp;
+          // 匹配 </span> 后面跟空格的情况
+          const processedRest = restOfLine.replace(/(<\/[^>]+>)\s+/g, '$1&nbsp;')
+
+          return nbspLeading + processedRest
+        })
+        .join('\n')
+
+      return `<pre><code>${preserved}</code></pre>`
+    }
+  )
+
   // 修复相对路径图片：将相对路径转换为绝对路径
   // 例如: src="assets/test-image.png" -> src="/assets/test-image.png"
   html = html.replace(

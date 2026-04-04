@@ -136,6 +136,17 @@ export class ContentIndexService {
   }
 
   /**
+   * 批量删除索引
+   */
+  static async deleteMany(postIds: string[]) {
+    await prisma.contentIndex.deleteMany({
+      where: {
+        id: { in: postIds }
+      }
+    })
+  }
+
+  /**
    * 获取草稿文章
    */
   static async getDrafts() {

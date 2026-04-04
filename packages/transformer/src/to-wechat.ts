@@ -135,6 +135,8 @@ export async function transformForWechat(
           border-radius: 6px;
           margin-bottom: 16px;
           border: 1px solid #e1e4e8;
+          white-space: pre-wrap; /* 保留空白字符和换行，支持自动换行 */
+          word-break: break-word;
         }
 
         .markdown-body pre code {
@@ -142,6 +144,8 @@ export async function transformForWechat(
           margin: 0;
           font-size: 100%;
           background: transparent !important;
+          white-space: pre-wrap; /* 保留代码缩进和换行 */
+          font-family: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
         }
 
         /* 行内代码样式 - 白色背景 */
@@ -152,6 +156,7 @@ export async function transformForWechat(
           background-color: #ffffff !important;
           border-radius: 6px;
           font-family: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
+          white-space: pre-wrap; /* 保留行内代码的空白字符 */
         }
 
         .markdown-body p code {
