@@ -17,7 +17,6 @@ interface PublishedPost {
   publishedAt: string
   tags: string[]
   platformUrls: PlatformUrl[]
-  contentIndexTags?: string[]
 }
 
 export default function PublishedPostManager() {
@@ -59,12 +58,8 @@ export default function PublishedPostManager() {
       platformUrls[pu.platform] = pu.url
     })
 
-    // 优先使用 ContentIndex 的标签，如果没有则使用 Post 的标签
-    const tags = post.contentIndexTags && post.contentIndexTags.length > 0
-      ? post.contentIndexTags
-      : post.tags
-
-    setEditData({ platformUrls, tags: [...tags] })
+    // 使用 Post 表的标签（持久化，不依赖文件系统）
+    setEditData({ platformUrls, tags: [...post.tags] })
   }
 
   const handleCancel = () => {
@@ -120,6 +115,42 @@ export default function PublishedPostManager() {
       ...prev,
       tags: tagArray
     }))
+  }
+
+  const handleDelete = async (postId: string, title: string) => {
+    const confirmed = window.confirm(
+      `确定要删除文章"${title}"吗？\n\n此操作将会：\n• 删除数据库中的文章记录\n• 删除所有平台发布记录和链接\n• 保留原始文件（不会删除）`
+    )
+
+    if (!confirmed) return
+
+    try {
+      const response = await fetch(`/api/posts/${postId}`, {
+        method: 'DELETE'
+      })
+
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text()
+        throw new Error(`服务器返回非JSON响应: ${text.substring(0, 100)}`)
+      }
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || data.details || '删除失败')
+      }
+
+      if (data.success) {
+        showToast('✅ 删除成功', 'success')
+        await fetchPublishedPosts() // 重新获取数据
+      } else {
+        throw new Error(data.error || '删除失败')
+      }
+    } catch (err) {
+      console.error('删除文章失败:', err)
+      showToast(err instanceof Error ? err.message : '删除失败', 'error')
+    }
   }
 
   const getPlatformName = (platform: string) => {
@@ -290,15 +321,7 @@ export default function PublishedPostManager() {
 
                   <div className="post-section">
                     <h4>标签</h4>
-                    {(post.contentIndexTags && post.contentIndexTags.length > 0) ? (
-                      <div className="tags-list">
-                        {post.contentIndexTags.map(tag => (
-                          <span key={tag} className="tag">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    ) : post.tags && post.tags.length > 0 ? (
+                    {post.tags && post.tags.length > 0 ? (
                       <div className="tags-list">
                         {post.tags.map(tag => (
                           <span key={tag} className="tag">
@@ -317,6 +340,12 @@ export default function PublishedPostManager() {
                       className="btn btn-primary btn-sm"
                     >
                       ✏️ 编辑
+                    </button>
+                    <button
+                      onClick={() => handleDelete(post.postId, post.title)}
+                      className="btn btn-danger btn-sm"
+                    >
+                      🗑️ 删除
                     </button>
                   </div>
                 </div>

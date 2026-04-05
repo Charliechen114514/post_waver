@@ -286,6 +286,15 @@
   background: var(--bg-tertiary, #e5e7eb);
 }
 
+.published-post-manager .btn-danger {
+  background: var(--danger-color, #ef4444);
+  color: white;
+}
+
+.published-post-manager .btn-danger:hover {
+  background: var(--danger-hover, #dc2626);
+}
+
 .published-post-manager .btn-sm {
   padding: 0.5rem 1rem;
   font-size: 0.875rem;

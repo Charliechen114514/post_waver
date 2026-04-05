@@ -119,6 +119,7 @@ ${previewText}
     // 调用 Claude API
     const client = new Anthropic({
       apiKey,
+      baseURL: process.env.ANTHROPIC_BASE_URL || undefined,
       dangerouslyAllowBrowser: true // 在 Claude Code 环境中允许
     })
 

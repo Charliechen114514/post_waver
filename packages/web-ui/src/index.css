@@ -221,6 +221,15 @@ body {
   background: #5a6268;
 }
 
+.btn-danger {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+}
+
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;

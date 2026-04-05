@@ -28,8 +28,12 @@ export async function createAPIServer(options: {
 
   const app = new Hono()
 
-  // 启用 CORS
-  app.use('*', cors())
+  // 启用 CORS（支持所有必要的HTTP方法）
+  app.use('*', cors({
+    origin: '*',
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization'],
+  }))
 
   // 健康检查
   app.get('/api/health', (c) => {
@@ -98,10 +102,6 @@ export async function createAPIServer(options: {
         orderBy: { publishedAt: 'desc' }
       })
 
-      // 获取所有文章的ContentIndex信息（用于获取标签）
-      const contentIndexes = await prisma.contentIndex.findMany()
-      const contentIndexMap = new Map(contentIndexes.map(idx => [idx.id, idx]))
-
       // 获取所有文章的平台URL映射
       const platformIdMappings = await prisma.platformIdMapping.findMany()
       const platformUrlMap = new Map<string, Array<{ platform: string; url: string; publishedAt: string | null }>>()
@@ -118,10 +118,16 @@ export async function createAPIServer(options: {
       })
 
       // 组装数据
-      const result = await Promise.all(posts.map(async (post) => {
-        // 从ContentIndex获取标签
-        const contentIndex = contentIndexMap.get(post.postId)
-        const contentIndexTags = contentIndex ? JSON.parse(contentIndex.tags) : []
+      const result = posts.map((post) => {
+        // 从Post表获取标签（持久化，不依赖文件系统）
+        let postTags: string[] = []
+        if (post.tags) {
+          try {
+            postTags = JSON.parse(post.tags)
+          } catch {
+            postTags = []
+          }
+        }
 
         // 获取平台URL
         const platformUrls = platformUrlMap.get(post.postId) || []
@@ -132,11 +138,10 @@ export async function createAPIServer(options: {
           title: post.title || post.postId,
           status: post.status,
           publishedAt: post.publishedAt?.toISOString() || post.updatedAt?.toISOString() || new Date().toISOString(),
-          tags: [], // Post表没有tags字段
-          contentIndexTags,
+          tags: postTags,
           platformUrls
         }
-      }))
+      })
 
       return c.json({
         success: true,
@@ -145,6 +150,53 @@ export async function createAPIServer(options: {
     } catch (error) {
       console.error('❌ 获取已发布文章列表失败:', error)
       return c.json({ error: '获取已发布文章列表失败', details: error instanceof Error ? error.message : String(error) }, 500)
+    }
+  })
+
+  // 删除已发布的文章（删除数据库记录，保留原始文件）
+  // 注意：这个路由必须放在 /api/posts/:id 之前
+  app.delete('/api/posts/:postId', async (c) => {
+    try {
+      const { postId } = c.req.param()
+      const { prisma, PlatformIdService } = await import('@content-hub/database')
+
+      console.log(`[DELETE] 开始删除文章: ${postId}`)
+
+      // 检查文章是否存在
+      const post = await prisma.post.findUnique({
+        where: { postId }
+      })
+
+      if (!post) {
+        console.log(`[DELETE] 文章不存在: ${postId}`)
+        return c.json({ error: '文章不存在' }, 404)
+      }
+
+      // 删除平台 ID 映射
+      console.log(`[DELETE] 删除平台 ID 映射`)
+      await PlatformIdService.deleteAllForPost(postId)
+
+      // 删除发布记录（注意：postId 外键引用的是 Post.id，不是 Post.postId）
+      console.log(`[DELETE] 删除发布记录`)
+      await prisma.publishRecord.deleteMany({
+        where: { postId: post.id }
+      })
+
+      // 删除文章记录
+      console.log(`[DELETE] 删除文章记录`)
+      await prisma.post.delete({
+        where: { postId }
+      })
+
+      console.log(`[DELETE] 文章删除成功: ${postId}`)
+
+      return c.json({
+        success: true,
+        message: '文章删除成功'
+      })
+    } catch (error) {
+      console.error(`[DELETE] 删除文章失败:`, error)
+      return c.json({ error: '删除文章失败', details: error instanceof Error ? error.message : String(error) }, 500)
     }
   })
 
@@ -273,25 +325,16 @@ export async function createAPIServer(options: {
         }
       }
 
-      // 更新标签（更新ContentIndex表）
+      // 更新标签（更新Post表，持久化且不依赖文件系统）
       if (Array.isArray(tags)) {
-        const contentIndex = await prisma.contentIndex.findUnique({
-          where: { id: postId }
+        await prisma.post.update({
+          where: { postId },
+          data: {
+            tags: JSON.stringify(tags),
+            updatedAt: new Date()
+          }
         })
-
-        if (contentIndex) {
-          // 更新ContentIndex的标签
-          await prisma.contentIndex.update({
-            where: { id: postId },
-            data: {
-              tags: JSON.stringify(tags),
-              updatedAt: new Date()
-            }
-          })
-          console.log(`✅ 已更新文章 ${postId} 的标签:`, tags)
-        } else {
-          console.warn(`⚠️ ContentIndex中未找到文章 ${postId}，标签未更新`)
-        }
+        console.log(`✅ 已更新文章 ${postId} 的标签:`, tags)
       }
 
       return c.json({
@@ -461,59 +504,39 @@ export async function createAPIServer(options: {
       if (includeRelatedLinks) {
         try {
           const { injectRelatedLinksWithPlatform } = await import('@content-hub/core')
-          const { prisma } = await import('@content-hub/database')
+          const { RelatedPostsService } = await import('@content-hub/database')
 
-          // 获取文章的索引信息
-          const contentIndex = await prisma.contentIndex.findUnique({
-            where: { id }
-          })
+          // 获取当前文章和相关推荐（基于Post表）
+          const currentPost = await RelatedPostsService.getPublishedPost(id)
 
-          if (contentIndex) {
-            // 获取所有文章索引
-            const allIndexes = await prisma.contentIndex.findMany()
+          if (currentPost) {
+            // 计算相关推荐
+            const relatedPosts = await RelatedPostsService.findRelatedPosts(id, 3)
 
-            // 构建文章映射
-            const postsMap = new Map<string, any>()
-            allIndexes.forEach(idx => {
-              postsMap.set(idx.id, {
-                id: idx.id,
-                title: idx.title,
-                date: idx.date.toISOString(),
-                tags: JSON.parse(idx.tags),
-                contentHash: idx.contentHash,
-                filepath: idx.filepath,
-                draft: idx.draft,
-                prev: idx.prev,
-                next: idx.next,
-                related: idx.related ? JSON.parse(idx.related) : []
-              })
-            })
-
-            // 获取当前文章的完整信息
-            const currentPost = postsMap.get(id) || {
-              id: contentIndex.id,
-              title: contentIndex.title,
-              date: contentIndex.date.toISOString(),
-              tags: JSON.parse(contentIndex.tags),
-              contentHash: contentIndex.contentHash,
-              filepath: contentIndex.filepath,
-              draft: contentIndex.draft,
-              prev: contentIndex.prev,
-              next: contentIndex.next,
-              related: contentIndex.related ? JSON.parse(contentIndex.related) : []
+            // 构建当前文章的完整信息
+            const currentPostWithRelated = {
+              ...currentPost,
+              related: relatedPosts
             }
+
+            // 获取所有已发布文章的Map（用于查找）
+            const postsMap = await RelatedPostsService.getPublishedPostsMap()
 
             // 使用平台真实URL注入相关链接
             console.log(`\n🔗 [Preview API] 为 ${platform} 平台应用相关链接...`)
+            console.log(`  找到 ${relatedPosts.length} 篇相关文章`)
+
             try {
-              useContent = await injectRelatedLinksWithPlatform(useContent, currentPost, postsMap, platform)
+              useContent = await injectRelatedLinksWithPlatform(useContent, currentPostWithRelated, postsMap, platform)
               console.log(`  ✅ ${platform} 平台相关链接已应用（使用平台真实 URL）`)
             } catch (error) {
               console.warn(`  ⚠️ ${platform} 平台URL查询失败，使用降级方案:`, error)
               // 降级：使用原始链接格式
               const { injectRelatedLinks } = await import('@content-hub/core')
-              useContent = injectRelatedLinks(useContent, currentPost, postsMap, ':year/:month/:day/:title/', true)
+              useContent = injectRelatedLinks(useContent, currentPostWithRelated, postsMap, ':year/:month/:day/:title/', true)
             }
+          } else {
+            console.log(`  ⚠️ 文章 ${id} 未发布或不存在，跳过相关链接`)
           }
         } catch (error) {
           console.warn('应用相关链接失败:', error)

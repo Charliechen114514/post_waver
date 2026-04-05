@@ -62,12 +62,24 @@ export class StatusTransitionService {
     }
 
     const prisma = getPrisma()
+
+    // 当状态转换为 published 时，从文件读取 tags 并保存
+    let updateData: any = {
+      status: toStatus,
+      ...(toStatus === 'published' ? { publishedAt: new Date() } : {})
+    }
+
+    if (toStatus === 'published') {
+      // 从文件读取 tags
+      const tags = await this.extractTagsFromFile(postId)
+      if (tags && tags.length > 0) {
+        updateData.tags = JSON.stringify(tags)
+      }
+    }
+
     const updated = await prisma.post.update({
       where: { postId },
-      data: {
-        status: toStatus,
-        ...(toStatus === 'published' ? { publishedAt: new Date() } : {})
-      }
+      data: updateData
     })
 
     // 记录操作日志
@@ -83,5 +95,61 @@ export class StatusTransitionService {
     })
 
     return updated
+  }
+
+  /**
+   * 从文章文件中提取 tags
+   */
+  private static async extractTagsFromFile(postId: string): Promise<string[] | null> {
+    try {
+      const { readFileSync } = await import('fs')
+      const { join } = await import('path')
+
+      // 尝试从 posts 和 done 目录读取
+      const postsPath = join(process.cwd(), 'content/posts', `${postId}.md`)
+      const donePath = join(process.cwd(), 'content/done', `${postId}.md`)
+
+      let content: string | null = null
+
+      try {
+        content = readFileSync(postsPath, 'utf-8')
+      } catch {
+        try {
+          content = readFileSync(donePath, 'utf-8')
+        } catch {
+          return null
+        }
+      }
+
+      if (!content) return null
+
+      // 提取 frontmatter 中的 tags
+      const tagsMatch = content.match(/^tags:\s*\n((?:[ \t]+-\s+.+\n?)+)/m)
+      if (tagsMatch) {
+        const tagsText = tagsMatch[1]
+        const tags = tagsText
+          .split('\n')
+          .map(line => line.replace(/^\s*-\s+/, '').trim())
+          .filter(tag => tag.length > 0)
+
+        return tags.length > 0 ? tags : null
+      }
+
+      // 尝试单行格式: tags: [tag1, tag2]
+      const singleLineMatch = content.match(/^tags:\s*\[(.+)\]/m)
+      if (singleLineMatch) {
+        const tags = singleLineMatch[1]
+          .split(',')
+          .map(tag => tag.trim().replace(/^['"]|['"]$/g, ''))
+          .filter(tag => tag.length > 0)
+
+        return tags.length > 0 ? tags : null
+      }
+
+      return null
+    } catch (error) {
+      console.warn(`[StatusTransitionService] Failed to extract tags for ${postId}:`, error)
+      return null
+    }
   }
 }
