@@ -45,6 +45,7 @@ export class FullPublishPipeline {
     this.steps = [
       { name: '解析文章', status: 'pending' },
       { name: '更新状态', status: 'pending' },
+      { name: '更新索引', status: 'pending' },
       { name: 'Hexo 同步', status: 'pending' },
       { name: '移动到 done', status: 'pending' },
       { name: '处理图片', status: 'pending' },
@@ -319,55 +320,27 @@ export class FullPublishPipeline {
           console.log(`\n🔗 [DEBUG] 开始应用相关链接...`)
           try {
             const { injectRelatedLinks, injectRelatedLinksWithPlatform } = await import('@content-hub/core')
-            const { prisma } = await import('@content-hub/database')
+            const { RelatedPostsService } = await import('@content-hub/database')
 
-            // 获取文章索引
-            const contentIndex = await prisma.contentIndex.findUnique({
-              where: { id: postId }
-            })
+            // 从 Post 表获取当前文章
+            const currentPost = await RelatedPostsService.getPublishedPost(postId)
 
-            console.log(`  文章索引查询结果:`, contentIndex ? '找到索引' : '未找到索引')
+            if (currentPost) {
+              // 计算相关推荐
+              const relatedPosts = await RelatedPostsService.findRelatedPosts(postId, 3)
 
-            if (contentIndex) {
-              const allIndexes = await prisma.contentIndex.findMany()
-              console.log(`  总索引数: ${allIndexes.length}`)
-
-              // 构建文章映射
-              const postsMap = new Map<string, any>()
-              allIndexes.forEach(idx => {
-                postsMap.set(idx.id, {
-                  id: idx.id,
-                  title: idx.title,
-                  date: idx.date.toISOString(),
-                  tags: JSON.parse(idx.tags),
-                  contentHash: idx.contentHash,
-                  filepath: idx.filepath,
-                  draft: idx.draft,
-                  prev: idx.prev,
-                  next: idx.next,
-                  related: idx.related ? JSON.parse(idx.related) : []
-                })
-              })
-
-              // 获取当前文章信息
-              const currentPost = postsMap.get(postId) || {
-                id: contentIndex.id,
-                title: contentIndex.title,
-                date: contentIndex.date.toISOString(),
-                tags: JSON.parse(contentIndex.tags),
-                contentHash: contentIndex.contentHash,
-                filepath: contentIndex.filepath,
-                draft: contentIndex.draft,
-                prev: contentIndex.prev,
-                next: contentIndex.next,
-                related: contentIndex.related ? JSON.parse(contentIndex.related) : []
+              // 构建当前文章的完整信息
+              const currentPostWithRelated = {
+                ...currentPost,
+                related: relatedPosts
               }
 
+              // 获取所有已发布文章的Map（用于查找）
+              const postsMap = await RelatedPostsService.getPublishedPostsMap()
+
               console.log(`  当前文章信息:`, {
-                title: currentPost.title,
-                prev: currentPost.prev || '(无)',
-                next: currentPost.next || '(无)',
-                relatedCount: currentPost.related?.length || 0
+                title: currentPostWithRelated.title,
+                relatedCount: currentPostWithRelated.related?.length || 0
               })
 
               // 注入相关链接
@@ -379,7 +352,7 @@ export class FullPublishPipeline {
               try {
                 originalContent = await injectRelatedLinksWithPlatform(
                   originalContent,
-                  currentPost,
+                  currentPostWithRelated,
                   postsMap,
                   'juejin'
                 )
@@ -387,7 +360,7 @@ export class FullPublishPipeline {
               } catch (error) {
                 console.warn(`    ⚠️ 掘金平台 URL 查询失败，使用降级方案（Hexo 格式）:`, error)
                 // 降级：使用原始链接格式
-                originalContent = injectRelatedLinks(originalContent, currentPost, postsMap)
+                originalContent = injectRelatedLinks(originalContent, currentPostWithRelated, postsMap)
               }
 
               // 为微信平台注入相关链接（使用微信真实URL）
@@ -395,7 +368,7 @@ export class FullPublishPipeline {
               try {
                 wechatContent = await injectRelatedLinksWithPlatform(
                   wechatContent,
-                  currentPost,
+                  currentPostWithRelated,
                   postsMap,
                   'wechat'
                 )
@@ -403,7 +376,7 @@ export class FullPublishPipeline {
               } catch (error) {
                 console.warn(`    ⚠️ 微信平台 URL 查询失败，使用降级方案（Hexo 格式）:`, error)
                 // 降级：使用原始链接格式
-                wechatContent = injectRelatedLinks(wechatContent, currentPost, postsMap)
+                wechatContent = injectRelatedLinks(wechatContent, currentPostWithRelated, postsMap)
               }
 
               const afterLength = originalContent.length

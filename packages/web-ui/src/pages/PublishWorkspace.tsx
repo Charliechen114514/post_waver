@@ -436,15 +436,13 @@ export default function PublishWorkspace() {
                   </option>
                 ))}
               </select>
-              {templates.length === 0 && (
-                <button
-                  onClick={() => window.location.href = '/post_waver/templates'}
-                  className="link-button"
-                  type="button"
-                >
-                  + 管理模板
-                </button>
-              )}
+              <button
+                onClick={() => window.location.href = '/post_waver/templates'}
+                className="link-button"
+                type="button"
+              >
+                ⚙️ 管理模板
+              </button>
             </div>
 
             {/* 相关链接开关 */}

@@ -20,6 +20,9 @@ model Post {
   tags        String?  // JSON array, stores article tags
   cleanedAt   DateTime? // When the post files were cleaned up
 
+  // Related posts recommendation
+  related     String?  // JSON array: [{id, title, score}]
+
   // Workflow fields
   workflowStatus   String? @default("pending") // pending, processing, done
   workflowLocation String? // posts, done

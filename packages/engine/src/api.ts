@@ -506,7 +506,7 @@ export async function createAPIServer(options: {
           const { injectRelatedLinksWithPlatform } = await import('@content-hub/core')
           const { RelatedPostsService } = await import('@content-hub/database')
 
-          // 获取当前文章和相关推荐（基于Post表）
+          // 从 Post 表获取当前文章（支持已发布和草稿）
           const currentPost = await RelatedPostsService.getPublishedPost(id)
 
           if (currentPost) {
@@ -524,7 +524,9 @@ export async function createAPIServer(options: {
 
             // 使用平台真实URL注入相关链接
             console.log(`\n🔗 [Preview API] 为 ${platform} 平台应用相关链接...`)
-            console.log(`  找到 ${relatedPosts.length} 篇相关文章`)
+            console.log(`  找到 ${currentPostWithRelated.related?.length || 0} 篇相关文章`)
+
+            const beforeLength = useContent.length
 
             try {
               useContent = await injectRelatedLinksWithPlatform(useContent, currentPostWithRelated, postsMap, platform)
@@ -532,6 +534,13 @@ export async function createAPIServer(options: {
             } catch (error) {
               console.warn(`  ⚠️ ${platform} 平台URL查询失败，使用降级方案:`, error)
               // 降级：使用原始链接格式
+              const { injectRelatedLinks } = await import('@content-hub/core')
+              useContent = injectRelatedLinks(useContent, currentPostWithRelated, postsMap, ':year/:month/:day/:title/', true)
+            }
+
+            // 如果内容长度没有改变（说明没有找到平台URL），使用降级方案
+            if (useContent.length === beforeLength) {
+              console.log(`  ℹ️  没有找到平台URL，使用预览链接格式`)
               const { injectRelatedLinks } = await import('@content-hub/core')
               useContent = injectRelatedLinks(useContent, currentPostWithRelated, postsMap, ':year/:month/:day/:title/', true)
             }
@@ -973,6 +982,45 @@ export async function createAPIServer(options: {
       }
 
       return c.json({ error: '删除注入模板失败', details: error instanceof Error ? error.message : String(error) }, 500)
+    }
+  })
+
+  // 预览注入模板在不同平台的渲染效果
+  app.post('/api/injection-templates/preview', async (c) => {
+    try {
+      const { content } = await c.req.json()
+
+      if (!content) {
+        return c.json({ error: '缺少content参数' }, 400)
+      }
+
+      const { formatInjectionForPlatform } = await import('@content-hub/core')
+
+      // 支持的平台预览（CSDN和知乎使用掘金的Markdown格式）
+      const platformConfigs = [
+        { platform: 'juejin' as const, name: '掘金' },
+        { platform: 'wechat' as const, name: '微信公众号' },
+        { platform: 'html' as const, name: 'HTML' },
+        { platform: 'juejin' as const, name: 'CSDN', actualPlatform: 'csdn' },
+        { platform: 'juejin' as const, name: '知乎', actualPlatform: 'zhihu' }
+      ]
+
+      const previews = platformConfigs.map(config => {
+        const formatted = formatInjectionForPlatform(content, config.platform)
+        return {
+          platform: config.actualPlatform || config.platform,
+          name: config.name,
+          preview: formatted
+        }
+      })
+
+      return c.json({
+        success: true,
+        previews
+      })
+    } catch (error) {
+      console.error('生成预览失败:', error)
+      return c.json({ error: '生成预览失败', details: error instanceof Error ? error.message : String(error) }, 500)
     }
   })
 

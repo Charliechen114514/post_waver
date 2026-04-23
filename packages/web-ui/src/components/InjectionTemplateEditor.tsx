@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { showToast } from './Toast'
 import './InjectionTemplateEditor.css'
 
@@ -24,11 +24,46 @@ export function InjectionTemplateEditor({ template, onSave, onCancel }: Injectio
   const [content, setContent] = useState(template?.content || '')
   const [enabled, setEnabled] = useState(template?.enabled ?? true)
   const [saving, setSaving] = useState(false)
+  const [previews, setPreviews] = useState<{ platform: string; name: string; preview: string }[]>([])
 
   // 验证
   const isValid = name.trim() !== '' && content.trim() !== '' && content.length <= 500
   const contentLength = content.length
   const isContentTooLong = contentLength > 500
+
+  // 更新预览
+  useEffect(() => {
+    if (!content) {
+      setPreviews([])
+      return
+    }
+
+    const updatePreviews = async () => {
+      try {
+        const response = await fetch('/api/injection-templates/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content })
+        })
+
+        const data = await response.json()
+        if (data.success) {
+          setPreviews(data.previews || [])
+        }
+      } catch (error) {
+        console.error('获取预览失败:', error)
+        // 降级：使用原始内容
+        setPreviews([
+          { platform: 'juejin', name: '掘金', preview: content },
+          { platform: 'wechat', name: '微信', preview: content },
+          { platform: 'html', name: 'HTML', preview: content }
+        ])
+      }
+    }
+
+    const timeoutId = setTimeout(updatePreviews, 500) // 防抖
+    return () => clearTimeout(timeoutId)
+  }, [content])
 
   const handleSave = async () => {
     if (!isValid) {
@@ -55,25 +90,6 @@ export function InjectionTemplateEditor({ template, onSave, onCancel }: Injectio
       setSaving(false)
     }
   }
-
-  // 平台预览示例
-  const previews = [
-    {
-      platform: 'juejin',
-      name: '掘金',
-      preview: content
-    },
-    {
-      platform: 'wechat',
-      name: '微信',
-      preview: `<div style="margin: 20px 0; padding: 15px; background-color: #f5f5f5; border-left: 4px solid #07c160;">\n${content}\n</div>`
-    },
-    {
-      platform: 'html',
-      name: 'HTML',
-      preview: `<div class="title-injection">\n${content}\n</div>`
-    }
-  ]
 
   return (
     <div className="injection-template-editor">
@@ -161,7 +177,14 @@ export function InjectionTemplateEditor({ template, onSave, onCancel }: Injectio
               {previews.map((p) => (
                 <div key={p.platform} className="preview-card">
                   <h4>{p.name}</h4>
-                  <pre className="preview-content">{p.preview || '(无内容)'}</pre>
+                  {p.platform === 'wechat' || p.platform === 'html' ? (
+                    <div
+                      className="preview-content"
+                      dangerouslySetInnerHTML={{ __html: p.preview || '(无内容)' }}
+                    />
+                  ) : (
+                    <pre className="preview-content">{p.preview || '(无内容)'}</pre>
+                  )}
                 </div>
               ))}
             </div>
