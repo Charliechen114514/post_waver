@@ -125,7 +125,7 @@ export class FullPublishPipeline {
 
       // Step 3: Hexo 同步
       await this.runStep(result, 2, async () => {
-        if (skipHexo || mode === 'preview-only' || !this.hexoConfig.get('enabled')) {
+        if (skipHexo || mode === 'preview-only' || !(await this.hexoConfig.get('enabled'))) {
           if (mode !== 'fast') {
             console.log('  ⏭️  跳过 Hexo 同步')
           }
